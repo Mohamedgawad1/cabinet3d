@@ -41,12 +41,19 @@ this PC and only the finished JSON is pushed to GitHub.
   `..\..\OneDrive\Desktop\dashboard\sc_pull\data\` and says how old it is.
 * It rewrites only the `subsystem` cell of each row (and truncation-repair for
   `assets[].refName`), commits and pushes; GitHub Pages goes live in ~40 s.
+* Same run also refreshes the progress flags from the platform:
+  `taskState`, and for a **Closed** task `pulled = true`, `terminated = true`,
+  `pullDate` / `termDate` = closing date (existing dates are never overwritten).
+  `--no-flags` limits the run to the subsystem column.
+* Safety: flags are only written from a **live** pull, and a cache older than 12 h
+  is refused (`--allow-stale` overrides), so a stale file can never roll the page back.
 
     python sync_subsystem.py              # live if the browser is open, else cache
     python sync_subsystem.py --live       # demand a live read
     python sync_subsystem.py --cached     # never touch the browser
     python sync_subsystem.py --dry-run    # report only
     python sync_subsystem.py --no-push    # write the file, skip git
+    python sync_subsystem.py --no-flags   # subsystem only, leave pulled/terminated alone
 
 A Windows scheduled task **“Cabinet3D SmartCloud Sync”** runs it every 30 minutes
 and appends to `sync_log.txt`.

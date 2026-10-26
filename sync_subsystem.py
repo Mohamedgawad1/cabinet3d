@@ -192,19 +192,40 @@ def clean(v):
 
 
 def build_maps(rows):
+    """task -> {sub, state, type, date, closed}; asset tag -> most common subsystem."""
     by_task = {}
     by_asset = collections.defaultdict(collections.Counter)
     for r in rows:
         pb = clean(r.get('ProcessBreakdown'))
-        if not pb:
-            continue
         task = clean(r.get('TaskName'))
-        if task:
-            by_task.setdefault(task, pb)
         tag = clean(r.get('AssetTag'))
-        if tag:
+        if pb and tag:
             by_asset[tag][pb] += 1
+        if not task:
+            continue
+        state = clean(r.get('TaskState'))
+        info = {
+            'sub': pb,
+            'state': state,
+            'type': clean(r.get('TaskType')),
+            'date': clean(r.get('ApprovedDate')),
+            'closed': state == 'Closed',
+        }
+        old = by_task.get(task)
+        # one task id should be one row; if it repeats, the Closed row wins
+        if old is None or (info['closed'] and not old['closed']):
+            by_task[task] = info
     return by_task, {k: c.most_common(1)[0][0] for k, c in by_asset.items()}
+
+
+def iso_date(v):
+    """'9/3/2026 11:44:55 AM' -> '2026-09-03' (leave anything else untouched)."""
+    m = re.match(r'^(\d{1,2})/(\d{1,2})/(\d{4})', clean(v))
+    if not m:
+        return ''
+    mm, dd, yy = (int(x) for x in m.groups())
+    return '%04d-%02d-%02d' % (yy, mm, dd)
+
 
 
 def load_page_data():
@@ -216,35 +237,60 @@ def load_page_data():
     return src, m.group(1), json.loads(m.group(2)), m.group(3)
 
 
-def apply(by_task, by_asset, dry_run=False):
+def apply(by_task, by_asset, dry_run=False, flags=True):
     src, prefix, obj, tail = load_page_data()
     cols = obj['columns']
     ti = cols.index('taskId')
     si = cols.index('subsystem')
     fi = cols.index('fromTag')
     toi = cols.index('toTag')
+    stai = cols.index('taskState')
+    pi = cols.index('pulled')
+    tri = cols.index('terminated')
+    pdi = cols.index('pullDate')
+    tdi = cols.index('termDate')
 
     stats = collections.Counter()
     samples = []
     for row in obj['rows']:
+        info = by_task.get(clean(row[ti])) or {}
+
         cur = clean(row[si])
-        new = (by_task.get(clean(row[ti])) or by_asset.get(clean(row[fi]))
+        new = (info.get('sub') or by_asset.get(clean(row[fi]))
                or by_asset.get(clean(row[toi])) or '')
         if not new:
-            stats['no match'] += 1
-            continue
-        if new == cur:
-            stats['already correct'] += 1
-            continue
-        if not cur:
-            stats['filled (was empty)'] += 1
-        elif new.startswith(cur):
-            stats['de-truncated'] += 1
+            stats['subsystem no match'] += 1
+        elif new == cur:
+            stats['subsystem already right'] += 1
         else:
-            stats['changed'] += 1
-        if len(samples) < 5:
-            samples.append((row[ti], cur, new))
-        row[si] = new
+            if not cur:
+                stats['subsystem filled (empty)'] += 1
+            elif new.startswith(cur):
+                stats['subsystem de-truncated'] += 1
+            else:
+                stats['subsystem changed'] += 1
+            if len(samples) < 5:
+                samples.append((row[ti], cur, new))
+            row[si] = new
+
+        # ---- progress flags: a Closed Conformity Check means pulled + terminated
+        if not (flags and info):
+            continue
+        if info['state'] and row[stai] != info['state']:
+            row[stai] = info['state']
+            stats['task state updated'] += 1
+        if info['closed']:
+            d = iso_date(info['date'])
+            if row[pi] is not True:
+                row[pi] = True
+                stats['pulled -> yes'] += 1
+            if row[tri] is not True:
+                row[tri] = True
+                stats['terminated -> yes'] += 1
+            if d and not clean(row[pdi]):
+                row[pdi] = d
+            if d and not clean(row[tdi]):
+                row[tdi] = d
 
     # assets[].refName mirrors the subsystem of a reference asset - keep it in step
     ref_fixed = 0
@@ -256,11 +302,18 @@ def apply(by_task, by_asset, dry_run=False):
             a['refName'] = new
             ref_fixed += 1
 
-    changed = stats['de-truncated'] + stats['filled (was empty)'] + stats['changed']
+    if isinstance(obj.get('stats'), dict):
+        obj['stats']['pulled'] = sum(1 for r in obj['rows'] if r[pi] is True)
+        obj['stats']['terminated'] = sum(1 for r in obj['rows'] if r[tri] is True)
+
+    changed = sum(v for k, v in stats.items()
+                  if k not in ('subsystem already right', 'subsystem no match'))
     log('')
-    for k in ('already correct', 'de-truncated', 'filled (was empty)', 'changed', 'no match'):
-        log('   %-18s %d' % (k, stats[k]))
-    log('   assets refName     %d' % ref_fixed)
+    for k in ('subsystem already right', 'subsystem de-truncated', 'subsystem filled (empty)',
+              'subsystem changed', 'subsystem no match', 'task state updated',
+              'pulled -> yes', 'terminated -> yes'):
+        log('   %-26s %d' % (k, stats[k]))
+    log('   assets refName            %d' % ref_fixed)
     for t, o, n in samples:
         log('   e.g. %s: %r -> %r' % (t, o, n))
 
@@ -274,7 +327,9 @@ def apply(by_task, by_asset, dry_run=False):
     body = json.dumps(obj, ensure_ascii=False, separators=(',', ':'))
     with open(DATA, 'w', encoding='utf-8-sig', newline='\n') as f:
         f.write(prefix + body + (tail or ';\n'))
-    log('\nWrote %s (%d cells updated, %.1f MB)' % (DATA, changed, os.path.getsize(DATA) / 1048576))
+    log('\nWrote %s (%d changes, %.1f MB)' % (DATA, changed, os.path.getsize(DATA) / 1048576))
+    log('   totals now: %d cables, pulled %d, terminated %d' % (
+        len(obj['rows']), obj['stats']['pulled'], obj['stats']['terminated']))
     return True
 
 
@@ -326,6 +381,10 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--live', action='store_true', help='require the SmartCloud browser')
     ap.add_argument('--cached', action='store_true', help='use the newest local pull only')
+    ap.add_argument('--no-flags', action='store_true',
+                    help='only refresh subsystem, leave pulled/terminated/taskState alone')
+    ap.add_argument('--allow-stale', action='store_true',
+                    help='also write from a cache older than 12 h (can revert live values)')
     ap.add_argument('--dry-run', action='store_true')
     ap.add_argument('--no-push', action='store_true')
     a = ap.parse_args()
@@ -333,11 +392,13 @@ def main():
     log('CABINET 3D - subsystem sync from SmartCloud')
 
     rows, source = [], ''
+    live = False
     if not a.cached:
         if cdp_alive():
             try:
                 log('   SmartCloud browser found on 9222 - live pull')
                 rows, source = live_pull()
+                live = True
             except Exception as e:
                 if a.live:
                     log(' !! live pull failed: %s' % str(e)[:300])
@@ -351,12 +412,19 @@ def main():
 
     if not rows:
         rows, source = cached_pull()
+        newest = max(os.path.getmtime(p) for p in CACHE_CANDIDATES if os.path.isfile(p))
+        age_h = (time.time() - newest) / 3600.0
+        # A stale cache must never overwrite fresher values that a live run wrote.
+        if age_h > 12 and not a.allow_stale:
+            log('   cache is %.0f h old - refusing to overwrite the page with it' % age_h)
+            log('   (use --allow-stale to force, or open the SmartCloud window)')
+            return 0
 
     log('   source: %s (%d platform rows)' % (source, len(rows)))
     by_task, by_asset = build_maps(rows)
     log('   mappable: %d task ids / %d asset tags' % (len(by_task), len(by_asset)))
 
-    if not apply(by_task, by_asset, dry_run=a.dry_run):
+    if not apply(by_task, by_asset, dry_run=a.dry_run, flags=(not a.no_flags) and live):
         return 0
     if a.no_push:
         log('   --no-push: nothing sent to GitHub')
