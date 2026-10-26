@@ -18,11 +18,11 @@
     margin:0;background:radial-gradient(1200px 800px at 50% -10%,#12303f 0%,#07131b 55%,#040c12 100%);
     color:var(--txt);font-family:'Segoe UI',Tahoma,sans-serif;letter-spacing:.01em;overflow:hidden;
   }
-  .app{height:100vh;display:grid;grid-template-rows:auto 1fr auto;gap:10px;padding:12px}
+  .app{height:100vh;display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) auto;gap:10px;padding:12px}
 
   /* ---------- top bar ---------- */
   .topbar{
-    display:flex;flex-direction:column;align-items:stretch;gap:8px;
+    display:flex;flex-direction:column;align-items:stretch;gap:8px;min-width:0;
     background:linear-gradient(180deg,rgba(17,38,52,.96),rgba(9,20,28,.96));
     border:1px solid var(--line2);border-radius:12px;padding:10px 14px;
     box-shadow:0 14px 30px rgba(0,0,0,.35),inset 0 0 0 1px rgba(255,255,255,.03);
@@ -2150,59 +2150,35 @@
   }
 
   /* ------------------------------------------------------ UI: search results */
-  function renderSearchResults() {
-    const g = S.searchGroups;
-    if (!g) return;
-    const cables = g.cables.filter(passesFilter);
-    $('#listCount').textContent = g.cables.length;
-    $('#listTitle').textContent = 'Search: ' + S.query;
-    const sec = (label, n, body, note) => body
-      ? `<div class="grouphead"><span>${label}</span><span class="badge b-gray">${n}</span></div>${note ? `<div class="note" style="margin:-2px 0 7px">${note}</div>` : ''}${body}`
-      : '';
-    const devCards = g.devices.slice(0, 6).map(a => {
-      const kind = deviceKind(a.desc, a.tag);
-      return `<div class="card" data-dev="${esc(a.tag)}">
-        <div class="t"><span class="tag" title="${esc(a.tag)}">${esc(a.tag)}</span>
-          <span class="badge ${KIND_BADGE[kind] || 'b-gray'}">${kind}</span></div>
-        <div class="route">${esc(a.desc || 'no description')}<br><span style="opacity:.75">${esc(a.loc || '')}</span> · ${a.count} cable${a.count === 1 ? '' : 's'}${a.inModel ? '' : (a.refs ? ' · <span style="color:#67d3c3">model tag</span>' : ' · <span style="color:#ff7186">REM</span>')}</div>
-      </div>`;
-    }).join('');
-    const locCards = g.locations.slice(0, 5).map(([k, n]) => `<div class="card" data-q="${esc(k)}">
-        <div class="t"><span class="tag"><span style="opacity:.6">LOCATION</span> ${esc(k)}</span><span class="badge b-gray">${n}</span></div>
-      </div>`).join('');
-    const taskCards = g.tasks.slice(0, 5).map(([k, n]) => `<div class="card" data-q="${esc(k)}">
-        <div class="t"><span class="tag">${esc(k)}</span><span class="badge b-amber">TASK</span><span class="badge b-gray">${n}</span></div>
-        <div class="route">${n} cable${n === 1 ? '' : 's'} in this task</div>
-      </div>`).join('');
-  function renderSearchResults() {
+﻿  function renderSearchResults() {
     const q = S.query.trim();
     const g = gatherSearch(q);
     const f = currentList();
     $('#listCount').textContent = f.length;
     $('#listTitle').textContent = 'Search: ' + q;
     const sec = (label, n, body, note) => body
-      ? `<div class="grouphead"><span>${label}</span><span class="badge b-gray">${n}</span></div>${note ? `<div class="note" style="margin:-2px 0 7px">${note}</div>` : ''}${body}`
+      · `<div class="grouphead"><span>${label}</span><span class="badge b-gray">${n}</span></div>${note · `<div class="note" style="margin:-2px 0 7px">${note}</div>` : ''}${body}`
       : '';
     const devCards = g.devices.slice(0, 6).map(a => {
       const kind = deviceKind(a.desc, a.tag);
       return `<div class="card" data-dev="${esc(a.tag)}">
         <div class="t"><span class="tag" title="${esc(a.tag)}">${esc(a.tag)}</span>
           <span class="badge ${KIND_BADGE[kind] || 'b-gray'}">${kind}</span></div>
-        <div class="route">${esc(a.desc || 'no description')}<br><span style="opacity:.75">${esc(a.loc || '')}</span> · ${a.count} cable${a.count === 1 ? '' : 's'}${a.inModel ? '' : (a.refs ? ' · <span style="color:#67d3c3">model tag</span>' : ' · <span style="color:#ff7186">REM</span>')}</div>
+        <div class="route">${esc(a.desc || 'no description')}<br><span style="opacity:.75">${esc(a.loc || '')}</span> · ${a.count} cable${a.count === 1 · '' : 's'}${a.inModel · '' : (a.refs · ' · <span style="color:#67d3c3">model tag</span>' : ' · <span style="color:#ff7186">REM</span>')}</div>
       </div>`;
     }).join('');
     const locCards = g.locations.slice(0, 5).map(([k, n]) => `<div class="card" data-q="${esc(k)}">
         <div class="t"><span class="tag"><span style="opacity:.6">LOCATION</span> ${esc(k)}</span><span class="badge b-gray">${n}</span></div>
-        <div class="route">appears in ${n} cable end${n === 1 ? '' : 's'}</div>
+        <div class="route">appears in ${n} cable end${n === 1 · '' : 's'}</div>
       </div>`).join('');
     const taskCards = g.tasks.slice(0, 5).map(([k, n]) => `<div class="card" data-q="${esc(k)}">
         <div class="t"><span class="tag">${esc(k)}</span><span class="badge b-cyan">TASK</span></div>
-        <div class="route">${n} cable${n === 1 ? '' : 's'}</div>
+        <div class="route">${n} cable${n === 1 · '' : 's'}</div>
       </div>`).join('');
     const subCards = g.subsystems.slice(0, 5).map(([k, n]) => {
       const p = PLAT_SUBS.find(x => String(x.n || '').trim() === k);
-      const info = n ? `${n} cable${n === 1 ? '' : 's'}`
-        : (p ? `no cable here · ${p.tasks} platform task${p.tasks === 1 ? '' : 's'}` : (PLAT_SUBS.length ? 'no cable here' : `${n} cable${n === 1 ? '' : 's'}`));
+      const info = n · `${n} cable${n === 1 · '' : 's'}`
+        : (p · `no cable here · ${p.tasks} platform task${p.tasks === 1 · '' : 's'}` : (PLAT_SUBS.length · 'no cable here' : `${n} cable${n === 1 · '' : 's'}`));
       return `<div class="card" data-q="${esc(k)}">
         <div class="t"><span class="tag" title="${esc(k)}">${esc(k)}</span><span class="badge b-violet">SUBSYSTEM</span></div>
         <div class="route">${info}</div>
@@ -2215,12 +2191,12 @@
       return card.replace('<span class="badge', `<span class="badge b-blue" style="margin-right:4px">${reason}</span><span class="badge`);
     }).join('');
     listEl.innerHTML =
-      sec('Devices & assets', g.devices.length, devCards, g.devices.length > 6 ? `showing 6 of ${g.devices.length}` : '') +
-      sec('Locations', g.locations.length, locCards, g.locations.length > 5 ? `showing 5 of ${g.locations.length}` : '') +
-      sec('Tasks', g.tasks.length, taskCards, g.tasks.length > 5 ? `showing 5 of ${g.tasks.length}` : '') +
-      sec('Subsystems', g.subsystems.length, subCards, g.subsystems.length > 5 ? `showing 5 of ${g.subsystems.length}` : '') +
+      sec('Devices & assets', g.devices.length, devCards, g.devices.length > 6 · `showing 6 of ${g.devices.length}` : '') +
+      sec('Locations', g.locations.length, locCards, g.locations.length > 5 · `showing 5 of ${g.locations.length}` : '') +
+      sec('Tasks', g.tasks.length, taskCards, g.tasks.length > 5 · `showing 5 of ${g.tasks.length}` : '') +
+      sec('Subsystems', g.subsystems.length, subCards, g.subsystems.length > 5 · `showing 5 of ${g.subsystems.length}` : '') +
       sec('Cables', cables.length, cabCards || `<div class="empty">No cable matches this text.</div>`,
-        cables.length > shown.length ? `showing ${shown.length} of ${cables.length} — refine the search` : '');
+        cables.length > shown.length · `showing ${shown.length} of ${cables.length} · refine the search` : '');
     listEl.querySelectorAll('.card').forEach(card => {
       card.onclick = () => {
         if (card.dataset.dev) {
@@ -2239,7 +2215,7 @@
   }
 
   /* -------------------------------------------------- UI: subsystems browser */
-  function renderSubsystems() {
+\n\n  function renderSubsystems() {
     const subs = subsysStats();
     const total = C.length;
     S.subsystems = subs;
@@ -3432,3 +3408,4 @@
 </script>
 </body>
 </html>
+

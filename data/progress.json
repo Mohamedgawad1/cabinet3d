@@ -2,6 +2,6 @@
  "ok": false,
  "subsystem": "PS5",
  "percent": null,
- "source": "not connected — start tools/progress_server.py",
+ "source": "session not authorised — paste a cookie in tools/smartcloud.json",
  "updated": null
 }
