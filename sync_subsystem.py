@@ -57,11 +57,12 @@ PAGE = 4000
 
 # Same restriction the ITR live sync uses: CPP AGI, PS5 location, pre-commissioning.
 FIELDS = ['TaskName', 'AssetTag', 'ProcessBreakdown', 'ProcessBreakdownIdentifier',
-          'TaskState', 'TaskType', 'TaskDiscipline', 'ApprovedDate']
+          'TaskState', 'TaskType', 'TaskDiscipline', 'ApprovedDate',
+          'ResponsibleCompanyID', 'TaskCategorySummary']
+# Every PS5 task, all responsible companies: the subsystem browser must show the
+# full platform list (277 E/I/T subsystems), not just the CPP AGI ones.
 RESTRICTIONS = [
-    {'FieldName': 'ResponsibleCompanyID', 'Term': '=', 'ValueCollection': [CPP_CID]},
     {'FieldName': 'PhysicalLocationUp1Summary', 'Term': 'like', 'ValueCollection': ['PS5 -']},
-    {'FieldName': 'TaskCategorySummary', 'Term': 'like', 'ValueCollection': ['PCOM - Precommissioning']},
 ]
 
 # Copied from sc_pull\itr_online_sync.py - the platform's own grid reader.
@@ -120,27 +121,56 @@ def live_pull(timeout_s=180):
         if page is None:
             page = ctx.new_page()
             created = True
+        def ready(seconds=60):
+            """Wait until the smartcloud grid API is available on the page."""
+            end = time.time() + seconds
+            while time.time() < end:
+                try:
+                    n = page.evaluate(
+                        "() => (typeof switchboardConfiguration!=='undefined' "
+                        "&& switchboardConfiguration.Products) "
+                        "? switchboardConfiguration.Products.length : -1")
+                    if n >= 0:
+                        return True
+                except Exception:
+                    pass
+                page.wait_for_timeout(2000)
+            return False
+
         try:
             page.goto(SWITCHBOARD, wait_until='domcontentloaded', timeout=60000)
-            end = time.time() + 60
-            while time.time() < end:
-                n = page.evaluate(
-                    "() => (typeof switchboardConfiguration!=='undefined' "
-                    "&& switchboardConfiguration.Products) "
-                    "? switchboardConfiguration.Products.length : -1")
-                if n >= 0:
-                    break
-                page.wait_for_timeout(2000)
-            else:
+            if not ready():
                 raise RuntimeError('SmartCloud is not signed in - open Start_SmartCloud.bat, '
                                    'sign in, then run again')
 
             off = 0
             end = time.time() + timeout_s
+            reloads = 0
             while time.time() < end:
-                r = page.evaluate("(%s)(%s)" % (GET_JS, json.dumps(
-                    {'v': 'vTasks_TestsPlanned', 'f': FIELDS, 'r': RESTRICTIONS,
-                     'n': PAGE, 'off': off, 'to': 120000})))
+                try:
+                    r = page.evaluate("(%s)(%s)" % (GET_JS, json.dumps(
+                        {'v': 'vTasks_TestsPlanned', 'f': FIELDS, 'r': RESTRICTIONS,
+                         'n': PAGE, 'off': off, 'to': 120000})))
+                except Exception as e:
+                    # the portal reloads itself now and then; the grid call is
+                    # stateless, so just wait for the page and fetch the same offset
+                    msg = str(e)
+                    if 'Execution context was destroyed' not in msg and \
+                            'navigat' not in msg.lower():
+                        raise
+                    reloads += 1
+                    if reloads > 5:
+                        raise RuntimeError('SmartCloud kept reloading during the pull '
+                                           '(%d times) - try again in a minute' % reloads)
+                    log('   page reloaded mid-pull - waiting for it to settle (retry %d)' % reloads)
+                    try:
+                        page.wait_for_load_state('domcontentloaded', timeout=30000)
+                    except Exception:
+                        pass
+                    if not ready():
+                        raise RuntimeError('SmartCloud did not come back after a reload - '
+                                           'open Start_SmartCloud.bat and sign in again')
+                    continue
                 if r.get('timeout'):
                     log('   pull timeout at offset %d - using %d rows' % (off, len(rows)))
                     break
@@ -235,6 +265,48 @@ def load_page_data():
     if not m:
         raise RuntimeError('data/cables.js does not look like a C3D_DATA file')
     return src, m.group(1), json.loads(m.group(2)), m.group(3)
+
+
+SUBS_FILE = os.path.join(HERE, 'data', 'subsystems.js')
+
+
+def platform_subsystems(rows):
+    """Every PS5 E/I/T subsystem on the platform (even the ones with no cable)."""
+    agg = {}
+    for r in rows:
+        d = clean(r.get('TaskDisciplineSummary') or r.get('TaskDiscipline'))[:1].upper()
+        if d not in ('E', 'I', 'T'):
+            continue
+        pb = clean(r.get('ProcessBreakdown'))
+        if not pb:
+            continue
+        a = agg.setdefault(pb, {'tasks': 0, 'closed': 0, 'types': collections.Counter()})
+        a['tasks'] += 1
+        if clean(r.get('TaskState')) == 'Closed':
+            a['closed'] += 1
+        t = clean(r.get('TaskType'))
+        if t:
+            a['types'][t] += 1
+    items = [{'n': k, 'tasks': v['tasks'], 'closed': v['closed'],
+              'types': len(v['types'])} for k, v in agg.items()]
+    items.sort(key=lambda x: (-x['tasks'], x['n']))
+    return items
+
+
+def write_subsystems(items, source):
+    payload = collections.OrderedDict([
+        ('updated', time.strftime('%Y-%m-%d %H:%M')),
+        ('source', source),
+        ('count', len(items)),
+        ('items', items),
+    ])
+    body = json.dumps(payload, ensure_ascii=False, separators=(',', ':'))
+    with open(SUBS_FILE, 'w', encoding='utf-8-sig', newline='\n') as f:
+        f.write('/* AUTO-GENERATED by sync_subsystem.py from SmartCloud '
+                '(vTasks_TestsPlanned, PS5 E/I/T) */\n')
+        f.write('window.C3D_SUBSYSTEMS = ' + body + ';\n')
+    log('   wrote %s (%d subsystems)' % (SUBS_FILE, len(items)))
+    return len(items)
 
 
 def apply(by_task, by_asset, dry_run=False, flags=True):
@@ -352,12 +424,12 @@ def push():
         log(' !! no GitHub token (%s) - commit kept locally, push skipped' % TOK_FILE)
         return 1
 
-    git('add', '--', 'data/cables.js')
-    st = git('status', '--porcelain', '--', 'data/cables.js')
+    git('add', '--', 'data/cables.js', 'data/subsystems.js')
+    st = git('status', '--porcelain', '--', 'data/cables.js', 'data/subsystems.js')
     if not (st.stdout or '').strip():
         log('   nothing to push - GitHub already has this version')
         return 0
-    r = git('commit', '-m', 'smartcloud sync: subsystem %s' % time.strftime('%Y-%m-%d %H:%M'))
+    r = git('commit', '-m', 'smartcloud sync %s' % time.strftime('%Y-%m-%d %H:%M'))
     log('   commit: %s' % ((r.stdout or r.stderr or '').strip().splitlines() or ['?'])[-1])
 
     url = REPO.replace('https://', 'https://Mohamedgawad1:%s@' % tok)
@@ -397,7 +469,7 @@ def main():
         if cdp_alive():
             try:
                 log('   SmartCloud browser found on 9222 - live pull')
-                rows, source = live_pull()
+                rows, source = live_pull(timeout_s=420)
                 live = True
             except Exception as e:
                 if a.live:
@@ -421,10 +493,34 @@ def main():
             return 0
 
     log('   source: %s (%d platform rows)' % (source, len(rows)))
-    by_task, by_asset = build_maps(rows)
+    # The cable rows belong to CPP AGI pre-commissioning; other companies reuse the
+    # same task ids with their own subsystem names, so they must never rewrite a cable.
+    cpp = [r for r in rows
+           if str(r.get('ResponsibleCompanyID') or '').strip() == str(CPP_CID)
+           and clean(r.get('TaskCategorySummary')).startswith('PCOM')]
+    if cpp:
+        log('   CPP AGI pre-commissioning rows: %d (of %d)' % (len(cpp), len(rows)))
+    else:
+        cpp = rows
+    by_task, by_asset = build_maps(cpp)
     log('   mappable: %d task ids / %d asset tags' % (len(by_task), len(by_asset)))
 
-    if not apply(by_task, by_asset, dry_run=a.dry_run, flags=(not a.no_flags) and live):
+    plat = platform_subsystems(rows)
+    log('   platform PS5 E/I/T subsystems: %d' % len(plat))
+
+    changed_data = apply(by_task, by_asset, dry_run=a.dry_run, flags=(not a.no_flags) and live)
+    if a.dry_run:
+        return 0
+
+    old_subs = ''
+    try:
+        old_subs = open(SUBS_FILE, encoding='utf-8-sig').read()
+    except Exception:
+        pass
+    write_subsystems(plat, source)
+    changed_subs = open(SUBS_FILE, encoding='utf-8-sig').read() != old_subs
+
+    if not changed_data and not changed_subs:
         return 0
     if a.no_push:
         log('   --no-push: nothing sent to GitHub')

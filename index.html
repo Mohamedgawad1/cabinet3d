@@ -311,6 +311,7 @@
 <script src="js/devices.js"></script>
 <script src="js/pics.js"></script>
 <script src="data/geo.js"></script>
+<script src="data/subsystems.js"></script>
 <script src="data/cables.js"></script>
 <script>
 /* =========================================================================
@@ -398,6 +399,14 @@
     if (t) TASK_INDEX.set(t, (TASK_INDEX.get(t) || 0) + 1);
     const s = String(c.subsystem || '').trim();
     if (s) SUB_INDEX.set(s, (SUB_INDEX.get(s) || 0) + 1);
+  });
+  /* The platform's full PS5 E/I/T subsystem list (SmartCloud, refreshed by
+     sync_subsystem.py). Subsystems with no cable in this schedule are kept in the
+     index with count 0 so they are still findable in the search and the browser. */
+  const PLAT_SUBS = (window.C3D_SUBSYSTEMS && window.C3D_SUBSYSTEMS.items) || [];
+  PLAT_SUBS.forEach(p => {
+    const k = String(p.n || '').trim();
+    if (k && !SUB_INDEX.has(k)) SUB_INDEX.set(k, 0);
   });
 
   /* --------------------------------------------------------------- helpers */
@@ -1841,7 +1850,14 @@
       rec.disc[c.discipline] = (rec.disc[c.discipline] || 0) + 1;
       [c.fromTag, c.toTag].forEach(t => { if (assetOf(t).inModel) rec.panels.add(t); });
     });
-    SUBSYS_STATS = [...m.values()].sort((a, b) => b.total - a.total);
+    /* platform subsystems that have no cable in the schedule: same card, total 0 */
+    const platBy = new Map(PLAT_SUBS.map(p => [String(p.n || '').trim(), p]));
+    platBy.forEach((p, key) => {
+      if (!key || m.has(key)) return;
+      m.set(key, { name: key, total: 0, pulled: 0, term: 0, rem: 0, disc: {}, panels: new Set(), plat: p });
+    });
+    SUBSYS_STATS = [...m.values()].sort((a, b) =>
+      (b.total - a.total) || ((b.plat ? b.plat.tasks : 0) - (a.plat ? a.plat.tasks : 0)));
     return SUBSYS_STATS;
   }
 
@@ -2103,10 +2119,15 @@
         <div class="t"><span class="tag">${esc(k)}</span><span class="badge b-amber">TASK</span><span class="badge b-gray">${n}</span></div>
         <div class="route">${n} cable${n === 1 ? '' : 's'} in this task</div>
       </div>`).join('');
-    const subCards = g.subsystems.slice(0, 5).map(([k, n]) => `<div class="card" data-q="${esc(k)}">
+    const subCards = g.subsystems.slice(0, 5).map(([k, n]) => {
+      const p = n ? null : PLAT_SUBS.find(x => String(x.n || '').trim() === k);
+      const info = n ? `${n} cable${n === 1 ? '' : 's'}`
+        : (p ? `no cable here · ${p.tasks} platform task${p.tasks === 1 ? '' : 's'}` : 'no cable here');
+      return `<div class="card" data-q="${esc(k)}">
         <div class="t"><span class="tag" title="${esc(k)}">${esc(k)}</span><span class="badge b-violet">SUBSYSTEM</span></div>
-        <div class="route">${n} cable${n === 1 ? '' : 's'}</div>
-      </div>`).join('');
+        <div class="route">${info}</div>
+      </div>`;
+    }).join('');
     const shown = cables.slice(0, 200);
     const cabCards = shown.map(c => {
       const reason = matchReason(c, S.query);
@@ -2147,24 +2168,36 @@
     $('#listTitle').textContent = 'All subsystems in the schedule';
     listEl.innerHTML = `<div class="note" style="margin:0 0 8px">${subs.length} subsystems · ${total} cables · click one to list every cable in it (all cabinets).</div>` +
       subs.map(s => {
-        const pct = Math.round(s.pulled / s.total * 100);
+        const pct = s.total ? Math.round(s.pulled / s.total * 100) : 0;
         const d = Object.entries(s.disc).map(([k, v]) => k + ':' + v).join(' · ');
+        const body = s.total
+          ? `${d} · ${s.panels.size} panels in model<br>pulled ${s.pulled}/${s.total} (${pct}%) · terminated ${s.term}`
+          : `no cables in this schedule<br>${s.plat ? `${s.plat.tasks} platform task${s.plat.tasks === 1 ? '' : 's'} · ${s.plat.closed} closed` : '—'}`;
         return `<div class="card" data-sub="${esc(s.name)}">
           <div class="t"><span class="tag" title="${esc(s.name)}">${esc(s.name)}</span>
             <span class="badge b-gray">${s.total}</span>
             ${s.rem ? `<span class="badge b-red">REM ${s.rem}</span>` : ''}</div>
-          <div class="route">${d} · ${s.panels.size} panels in model<br>
-            pulled ${s.pulled}/${s.total} (${pct}%) · terminated ${s.term}</div>
+          <div class="route">${body}</div>
           <div style="height:4px;border-radius:3px;background:rgba(255,255,255,.07);margin-top:6px;overflow:hidden">
             <div style="height:100%;width:${pct}%;background:linear-gradient(90deg,#5cc7f2,#54ffc0)"></div></div>
         </div>`;
       }).join('');
     listEl.querySelectorAll('.card').forEach(card => card.onclick = () => {
       const name = card.dataset.sub;
+      const hits = C.filter(c => (String(c.subsystem || '').trim() || '(unassigned)') === name);
       S.query = ''; qEl.value = '';
-      S.results = C.filter(c => (String(c.subsystem || '').trim() || '(unassigned)') === name);
+      S.results = hits;
       S.resultTitle = 'Subsystem · ' + name;
-      S.tab = 'results'; setTabUI(); renderList();
+      S.tab = 'results'; setTabUI();
+      if (!hits.length) {
+        const p = PLAT_SUBS.find(x => String(x.n || '').trim() === name);
+        $('#listTitle').textContent = 'Subsystem · ' + name;
+        $('#listCount').textContent = 0;
+        listEl.innerHTML = `<div class="note" style="margin:0 0 8px">No cable in this schedule uses this subsystem.
+          ${p ? `SmartCloud has <b>${p.tasks}</b> task${p.tasks === 1 ? '' : 's'} here (${p.closed} closed).` : ''}</div>`;
+        return;
+      }
+      renderList();
       if (S.results[0]) selectCable(S.results[0]);
     });
   }

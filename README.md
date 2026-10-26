@@ -20,6 +20,7 @@ for the `data/*.js` files.
 | `index.html` | the whole UI + 3D scene logic |
 | `lib/` | Three.js r147 and the post-processing modules (bloom) |
 | `data/cables.js` | 3 919 cables, 2 170 assets — generated from `Cable_Routing_Termination_Tracker.xlsx` (`Cables Master`) |
+| `data/subsystems.js` | the platform's full PS5 E/I/T subsystem list (277) for the Subsystems browser + search |
 | `data/geo.js` | cable-route geometry |
 | `js/devices.js` | parametric 3D builders for every equipment family |
 | `js/pics.js` | device silhouettes |
@@ -41,6 +42,10 @@ this PC and only the finished JSON is pushed to GitHub.
   `..\..\OneDrive\Desktop\dashboard\sc_pull\data\` and says how old it is.
 * It rewrites only the `subsystem` cell of each row (and truncation-repair for
   `assets[].refName`), commits and pushes; GitHub Pages goes live in ~40 s.
+* It also writes `data/subsystems.js`: **every** PS5 E/I/T subsystem on the
+  platform (277, all companies), so the Subsystems browser and the search show
+  the whole platform list. Subsystems with no cable in the schedule keep the
+  same card, marked `no cables in this schedule`.
 * Same run also refreshes the progress flags from the platform:
   `taskState`, and for a **Closed** task `pulled = true`, `terminated = true`,
   `pullDate` / `termDate` = closing date (existing dates are never overwritten).
