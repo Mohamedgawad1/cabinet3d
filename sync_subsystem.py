@@ -493,16 +493,11 @@ def main():
             return 0
 
     log('   source: %s (%d platform rows)' % (source, len(rows)))
-    # The cable rows belong to CPP AGI pre-commissioning; other companies reuse the
-    # same task ids with their own subsystem names, so they must never rewrite a cable.
-    cpp = [r for r in rows
-           if str(r.get('ResponsibleCompanyID') or '').strip() == str(CPP_CID)
-           and clean(r.get('TaskCategorySummary')).startswith('PCOM')]
-    if cpp:
-        log('   CPP AGI pre-commissioning rows: %d (of %d)' % (len(cpp), len(rows)))
-    else:
-        cpp = rows
-    by_task, by_asset = build_maps(cpp)
+    # A task id is unique across the whole platform pull (checked: 0 duplicates),
+    # so every row can be used for mapping. The cable schedule's ids belong to
+    # more than one responsible company (CPP AGI / EITS), so restricting the map
+    # to CPP alone would leave 237 cables on stale, truncated subsystem names.
+    by_task, by_asset = build_maps(rows)
     log('   mappable: %d task ids / %d asset tags' % (len(by_task), len(by_asset)))
 
     plat = platform_subsystems(rows)

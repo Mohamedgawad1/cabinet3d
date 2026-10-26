@@ -22,7 +22,7 @@
 
   /* ---------- top bar ---------- */
   .topbar{
-    display:grid;grid-template-columns:auto minmax(320px,1fr) auto;align-items:center;gap:14px;
+    display:flex;flex-direction:column;align-items:stretch;gap:8px;
     background:linear-gradient(180deg,rgba(17,38,52,.96),rgba(9,20,28,.96));
     border:1px solid var(--line2);border-radius:12px;padding:10px 14px;
     box-shadow:0 14px 30px rgba(0,0,0,.35),inset 0 0 0 1px rgba(255,255,255,.03);
@@ -34,7 +34,8 @@
   .ver{font-size:.56rem;font-weight:800;letter-spacing:.1em;color:var(--cyan);border:1px solid rgba(127,220,255,.3);
        background:rgba(127,220,255,.09);padding:4px 8px;border-radius:999px}
 
-  .searchwrap{position:relative;display:flex;align-items:center;gap:10px}
+  .searchwrap{position:relative;display:flex;align-items:center;gap:9px;flex-wrap:wrap;justify-content:flex-end}
+  .searchwrap .searchbox{flex:1 1 240px;min-width:180px}
   .searchbox{flex:1;display:flex;align-items:center;gap:9px;background:rgba(15,35,49,.9);
     border:1px solid var(--line2);border-radius:9px;padding:9px 13px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.02)}
   .searchbox svg{flex:none;opacity:.85}
@@ -46,7 +47,42 @@
   .iconbtn:hover{background:rgba(127,220,255,.16);transform:translateY(-1px)}
   .iconbtn.ghost{background:rgba(255,255,255,.03);border-color:rgba(255,255,255,.1);color:var(--muted)}
 
-  .viewbar{display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+  /* system completion, pulled from the Smart Cloud dashboard */
+  .prog{flex:0 0 auto;background:rgba(15,35,49,.9);border:1px solid var(--line);border-radius:9px;
+    padding:0 8px;height:38px;display:flex;align-items:center;gap:8px}
+  .progtop{display:flex;align-items:center;gap:7px}
+  .proglbl{font-size:.58rem;letter-spacing:.13em;text-transform:uppercase;color:var(--muted);font-weight:800}
+  .progval{font-family:var(--mono);font-size:.86rem;font-weight:700;color:var(--cyan);min-width:44px;text-align:right}
+  .progval.stale{color:#ffb454}
+  .progbtn{background:transparent;border:1px solid rgba(127,220,255,.25);color:var(--cyan);
+    border-radius:6px;width:22px;height:22px;cursor:pointer;font-size:.8rem;line-height:1;padding:0}
+  .progbtn:hover{background:rgba(127,220,255,.16)}
+  .progbtn.spin{animation:spin .9s linear infinite;pointer-events:none;opacity:.7}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .progbar{width:64px;height:5px;border-radius:3px;background:rgba(255,255,255,.07);overflow:hidden;flex:none}
+  .progbar i{display:block;height:100%;width:0;border-radius:3px;
+    background:linear-gradient(90deg,#2ad1a0,#7fdcff);transition:width .5s ease}
+  .progsrc{display:none}
+
+  .viewbar{display:flex;gap:5px;align-items:center;flex-wrap:nowrap;justify-content:flex-end;
+    overflow-x:auto;scrollbar-width:none}
+  .viewbar::-webkit-scrollbar{display:none}
+  .viewbar .vbtn{flex:none}
+
+  .trow{display:flex;align-items:center;gap:10px;min-width:0;overflow:hidden}
+  .trow-a .searchwrap{flex:1;min-width:0;flex-wrap:nowrap}
+  .trow-b .viewbar{margin-left:auto;min-width:0}
+  .trow-b .quickrow{flex:0 1 auto;min-width:0}
+  .quickrow{display:flex;gap:6px;align-items:center;flex-wrap:nowrap;justify-content:flex-end;
+    overflow-x:auto;scrollbar-width:none;padding-bottom:1px}
+  .quickrow::-webkit-scrollbar{display:none}
+  .quickrow .qbtn{flex:none}
+  .qbtn{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.12);color:#b7cddb;
+    border-radius:999px;padding:3px 9px;cursor:pointer;font-size:.63rem;font-weight:700;letter-spacing:.03em;
+    font-family:var(--mono);transition:.16s;white-space:nowrap}
+  .qbtn b{color:var(--cyan);font-weight:800;margin-left:5px}
+  .qbtn:hover{border-color:rgba(127,220,255,.5);color:#e6f6ff;transform:translateY(-1px)}
+  .qbtn.on{background:rgba(127,220,255,.16);border-color:rgba(127,220,255,.55);color:#eaf9ff}
   .vbtn{background:rgba(18,41,58,.9);border:1px solid var(--line);color:var(--muted);border-radius:7px;
     padding:7px 9px;font-size:.63rem;font-weight:800;letter-spacing:.08em;cursor:pointer;text-transform:uppercase;transition:.16s}
   .vbtn:hover{color:var(--cyan);border-color:rgba(127,220,255,.45)}
@@ -193,6 +229,7 @@
 <div class="app">
 
   <header class="topbar">
+    <div class="trow trow-a">
     <div class="brand">
       <span class="dot"></span>
       <div>
@@ -210,6 +247,17 @@
       </div>
       <button class="iconbtn ghost" id="btnCsv" title="Export current list to CSV">CSV</button>
       <button class="iconbtn ghost" id="btnPng" title="Save PNG snapshot">PNG</button>
+      <button class="iconbtn ghost" id="btnPrint" title="Print / save as PDF (Ctrl+P)">Print</button>
+    </div>
+    </div>
+
+    <div class="trow trow-b">
+    <div class="prog" id="prog" title="System completion">
+      <span class="proglbl">PS5 complete</span>
+      <div class="progbar"><i id="progBar"></i></div>
+      <span class="progval" id="progVal">—</span>
+      <button class="progbtn" id="progRefresh" title="Refresh from Smart Cloud">⟳</button>
+      <div class="progsrc" id="progSrc">not connected</div>
     </div>
 
     <div class="viewbar" id="viewbar">
@@ -222,6 +270,9 @@
       <button class="vbtn" data-view="inside">Inside</button>
       <button class="vbtn" data-view="field">Field</button>
       <button class="vbtn" data-view="fit">Fit</button>
+    </div>
+
+    <div class="quickrow" id="quickrow"></div>
     </div>
   </header>
 
@@ -309,6 +360,7 @@
 <script src="lib/GLTFLoader.js"></script>
 <script src="lib/OBJLoader.js"></script>
 <script src="js/devices.js"></script>
+<script src="data/img/fam/manifest.js"></script>
 <script src="js/pics.js"></script>
 <script src="data/geo.js"></script>
 <script src="data/subsystems.js"></script>
@@ -1850,14 +1902,18 @@
       rec.disc[c.discipline] = (rec.disc[c.discipline] || 0) + 1;
       [c.fromTag, c.toTag].forEach(t => { if (assetOf(t).inModel) rec.panels.add(t); });
     });
-    /* platform subsystems that have no cable in the schedule: same card, total 0 */
+    /* Show exactly the platform PS5 E/I/T list (277). Keep the same card design. */
     const platBy = new Map(PLAT_SUBS.map(p => [String(p.n || '').trim(), p]));
+    const list = [];
     platBy.forEach((p, key) => {
-      if (!key || m.has(key)) return;
-      m.set(key, { name: key, total: 0, pulled: 0, term: 0, rem: 0, disc: {}, panels: new Set(), plat: p });
+      if (!key) return;
+      const rec = m.get(key) || { name: key, total: 0, pulled: 0, term: 0, rem: 0, disc: {}, panels: new Set() };
+      if (!m.has(key)) m.set(key, rec);
+      rec.plat = p;
+      list.push(rec);
     });
-    SUBSYS_STATS = [...m.values()].sort((a, b) =>
-      (b.total - a.total) || ((b.plat ? b.plat.tasks : 0) - (a.plat ? a.plat.tasks : 0)));
+    SUBSYS_STATS = list.sort((a, b) =>
+      (b.total - a.total) || ((b.plat ? b.plat.tasks : 0) - (a.plat ? a.plat.tasks : 0)) || a.name.localeCompare(b.name));
     return SUBSYS_STATS;
   }
 
@@ -1996,8 +2052,7 @@
     if (DEV_PIC_MEM.has(key)) return DEV_PIC_MEM.get(key);
     let url = '';
     try {
-      const real = window.CAB3D_PIC && window.CAB3D_PIC.realFor ? window.CAB3D_PIC.realFor(tag) : null;
-      url = real || (window.CAB3D_PIC ? window.CAB3D_PIC.thumbFor(kind, desc, tag) : '');
+      url = window.CAB3D_PIC ? (window.CAB3D_PIC.famPic(kind) || window.CAB3D_PIC.thumbFor(kind, desc, tag)) : '';
     } catch (e) { url = ''; }
     DEV_PIC_MEM.set(key, url);
     return url;
@@ -2119,10 +2174,35 @@
         <div class="t"><span class="tag">${esc(k)}</span><span class="badge b-amber">TASK</span><span class="badge b-gray">${n}</span></div>
         <div class="route">${n} cable${n === 1 ? '' : 's'} in this task</div>
       </div>`).join('');
+  function renderSearchResults() {
+    const q = S.query.trim();
+    const g = gatherSearch(q);
+    const f = currentList();
+    $('#listCount').textContent = f.length;
+    $('#listTitle').textContent = 'Search: ' + q;
+    const sec = (label, n, body, note) => body
+      ? `<div class="grouphead"><span>${label}</span><span class="badge b-gray">${n}</span></div>${note ? `<div class="note" style="margin:-2px 0 7px">${note}</div>` : ''}${body}`
+      : '';
+    const devCards = g.devices.slice(0, 6).map(a => {
+      const kind = deviceKind(a.desc, a.tag);
+      return `<div class="card" data-dev="${esc(a.tag)}">
+        <div class="t"><span class="tag" title="${esc(a.tag)}">${esc(a.tag)}</span>
+          <span class="badge ${KIND_BADGE[kind] || 'b-gray'}">${kind}</span></div>
+        <div class="route">${esc(a.desc || 'no description')}<br><span style="opacity:.75">${esc(a.loc || '')}</span> · ${a.count} cable${a.count === 1 ? '' : 's'}${a.inModel ? '' : (a.refs ? ' · <span style="color:#67d3c3">model tag</span>' : ' · <span style="color:#ff7186">REM</span>')}</div>
+      </div>`;
+    }).join('');
+    const locCards = g.locations.slice(0, 5).map(([k, n]) => `<div class="card" data-q="${esc(k)}">
+        <div class="t"><span class="tag"><span style="opacity:.6">LOCATION</span> ${esc(k)}</span><span class="badge b-gray">${n}</span></div>
+        <div class="route">appears in ${n} cable end${n === 1 ? '' : 's'}</div>
+      </div>`).join('');
+    const taskCards = g.tasks.slice(0, 5).map(([k, n]) => `<div class="card" data-q="${esc(k)}">
+        <div class="t"><span class="tag">${esc(k)}</span><span class="badge b-cyan">TASK</span></div>
+        <div class="route">${n} cable${n === 1 ? '' : 's'}</div>
+      </div>`).join('');
     const subCards = g.subsystems.slice(0, 5).map(([k, n]) => {
-      const p = n ? null : PLAT_SUBS.find(x => String(x.n || '').trim() === k);
+      const p = PLAT_SUBS.find(x => String(x.n || '').trim() === k);
       const info = n ? `${n} cable${n === 1 ? '' : 's'}`
-        : (p ? `no cable here · ${p.tasks} platform task${p.tasks === 1 ? '' : 's'}` : 'no cable here');
+        : (p ? `no cable here · ${p.tasks} platform task${p.tasks === 1 ? '' : 's'}` : (PLAT_SUBS.length ? 'no cable here' : `${n} cable${n === 1 ? '' : 's'}`));
       return `<div class="card" data-q="${esc(k)}">
         <div class="t"><span class="tag" title="${esc(k)}">${esc(k)}</span><span class="badge b-violet">SUBSYSTEM</span></div>
         <div class="route">${info}</div>
@@ -2199,6 +2279,51 @@
       }
       renderList();
       if (S.results[0]) selectCable(S.results[0]);
+    });
+  }
+
+  /* --------------------------------------------------------- quick families
+     The families the site actually uses, counted straight from the schedule.
+     Clicking one lists its cables in the left panel. */
+  function quickFamilies() {
+    const has = (c, re) => re.test([c.fromDesc, c.toDesc, c.subsystem, c.cableType, c.tag].join(' '));
+    const disc = d => c => String(c.discipline || '').trim().toUpperCase() === d;
+    const list = [
+      { key: 'E',   label: 'Electrical',      test: disc('E') },
+      { key: 'I',   label: 'Instrumentation', test: disc('I') },
+      { key: 'T',   label: 'Telecom / net',   test: disc('T') },
+      { key: 'LTG', label: 'Lighting',        test: disc('LTG') },
+      { key: 'PAGA', label: 'PAGA',           test: c => has(c, /PAGA/i) },
+      { key: 'FIRE', label: 'Fire & pumps',   test: c => has(c, /FIRE|PUMP|DELUGE|JOCKEY|FOAM|SPRINKLER/i) },
+      { key: 'GEN',  label: 'GEN A–G',        test: c => has(c, /GENERATOR\s+[A-G]\b/i) }
+    ];
+    list.forEach(f => { f.items = C.filter(f.test); });
+    return list.filter(f => f.items.length);
+  }
+
+  function applyQuick(f) {
+    S.query = ''; qEl.value = '';
+    S.searchGroups = null;
+    S.results = f.items;
+    S.resultTitle = f.label + ' · ' + f.items.length + ' cables';
+    S.tab = 'results';
+    setTabUI();
+    renderList();
+    document.querySelectorAll('#quickrow .qbtn').forEach(b => b.classList.toggle('on', b.dataset.q === f.key));
+    if (f.items[0]) selectCable(f.items[0]);
+  }
+
+  function buildQuickRow() {
+    const row = $('#quickrow');
+    if (!row) return;
+    const fams = quickFamilies();
+    row.innerHTML = fams.map(f =>
+      `<button class="qbtn" data-q="${f.key}">${f.label}<b>${f.items.length}</b></button>`).join('');
+    row.querySelectorAll('.qbtn').forEach(b => {
+      b.onclick = () => {
+        const f = fams.find(x => x.key === b.dataset.q);
+        if (f) applyQuick(f);
+      };
     });
   }
 
@@ -3030,6 +3155,7 @@
   setHost(preferred.tag);
   updateKindLegend();
   renderFilters();
+  buildQuickRow();
   setTabUI();
   resize();
   setView('iso', true);
@@ -3037,10 +3163,269 @@
   toggleTool($('#tDoors'), true);
   requestAnimationFrame(animate);
 
+  /* ---------------------------------------------------------------- completion
+     Two honest numbers:
+       · schedule progress — counted from the tracker itself (pulled / terminated)
+       · Smart Cloud progress — pulled from the corporate dashboard on demand
+     The refresh button asks the local bridge (tools/progress_server.py) to pull
+     the dashboard figure; if the bridge is not running we say so plainly and
+     keep the last known value. */
+  const PROG_LOCAL = 'c3d.prog.local';
+
+  function scheduleProgress() {
+    let total = 0, pulled = 0, term = 0;
+    for (const c of C) {
+      total++;
+      if (c.pulled === true || c.pulled === 'Y' || c.pulled === 'YES') pulled++;
+      if (c.terminated === true || c.terminated === 'Y' || c.terminated === 'YES') term++;
+    }
+    return { total, pulled, term };
+  }
+
+  function paintProgress(pct, source, stale) {
+    const v = $('#progVal'), b = $('#progBar'), s = $('#progSrc');
+    if (pct == null || !isFinite(pct)) {
+      v.textContent = '—';
+      v.classList.add('stale');
+      b.style.width = '0%';
+    } else {
+      v.textContent = (+pct).toFixed(1).replace(/\.0$/, '') + '%';
+      v.classList.toggle('stale', !!stale);
+      b.style.width = Math.max(0, Math.min(100, pct)) + '%';
+    }
+    s.textContent = source || '';
+    s.title = source || '';
+    $('#prog').title = source || '';
+  }
+
+  function showBridgeNote(msg) {
+    const s = $('#progSrc');
+    s.textContent = msg;
+    s.title = msg;
+  }
+
+  async function loadProgress() {
+    const sp = scheduleProgress();
+    const pctSchedule = sp.total ? (sp.pulled / sp.total) * 100 : null;
+
+    /* a figure the user typed in by hand survives reloads */
+    const manual = localStorage.getItem(PROG_LOCAL);
+    if (manual) {
+      try {
+        const m = JSON.parse(manual);
+        paintProgress(m.percent, 'manual · ' + (m.saved || ''), false);
+        return;
+      } catch (e) { /* ignore */ }
+    }
+
+    try {
+      const r = await fetch('data/progress.json?t=' + Date.now(), { cache: 'no-store' });
+      const d = await r.json();
+      if (d && d.percent != null) {
+        paintProgress(d.percent, (d.source || 'Smart Cloud') + (d.updated ? ' · ' + d.updated : ''), !d.ok);
+        return;
+      }
+      paintProgress(pctSchedule, 'tracker · pulled ' + sp.pulled + '/' + sp.total + ' · terminated ' + sp.term, false);
+    } catch (e) {
+      paintProgress(pctSchedule, 'tracker · pulled ' + sp.pulled + '/' + sp.total + ' · terminated ' + sp.term, false);
+    }
+  }
+
+  async function refreshProgress() {
+    const btn = $('#progRefresh');
+    btn.classList.add('spin');
+    showBridgeNote('asking Smart Cloud…');
+    try {
+      const r = await fetch('http://127.0.0.1:8010/refresh', { method: 'POST' });
+      const d = await r.json();
+      if (d && d.percent != null) {
+        paintProgress(d.percent, (d.source || 'Smart Cloud') + (d.updated ? ' · ' + d.updated : ''), !d.ok);
+        toast('Completion updated from Smart Cloud: ' + d.percent + '%');
+        return;
+      }
+      showBridgeNote(d && d.source ? d.source : 'dashboard gave no figure');
+      toast('Smart Cloud did not return a percentage — see tools/smartcloud.sample.json', 'warn');
+    } catch (e) {
+      /* no bridge: try the cached file, then offer manual entry */
+      let cached = null;
+      try {
+        const r = await fetch('data/progress.json?t=' + Date.now(), { cache: 'no-store' });
+        cached = await r.json();
+      } catch (e2) { /* offline */ }
+      if (cached && cached.percent != null) {
+        paintProgress(cached.percent, (cached.source || 'cached'), true);
+        toast('Bridge not running — showing last saved figure', 'warn');
+      } else {
+        showBridgeNote('bridge offline · start tools/progress_server.py');
+        const raw = prompt('Smart Cloud bridge is not running.\n\nType the PS5 completion % from the dashboard to pin it here (or Cancel):', '');
+        if (raw != null && raw.trim() !== '' && isFinite(+raw)) {
+          const pct = Math.max(0, Math.min(100, +raw));
+          const stamp = new Date().toISOString().slice(0, 16).replace('T', ' ');
+          localStorage.setItem(PROG_LOCAL, JSON.stringify({ percent: pct, saved: stamp }));
+          paintProgress(pct, 'manual · ' + stamp, false);
+          toast('Pinned manually at ' + pct + '%');
+        }
+      }
+    } finally {
+      btn.classList.remove('spin');
+    }
+  }
+
+  /* ---------------------------------------------------------------- printing
+     A clean A4 sheet: one cable, its two ends, the cabinet landing point and a
+     picture of each device. Falls back to a site summary when nothing is selected. */
+  function printSheet() {
+    const c = S.selCable;
+    const esc2 = v => String(v == null ? '' : v).replace(/[&<>]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[ch]));
+    const pic = (kind, desc, tag) => {
+      try { const u = DEV_PIC(kind, desc, tag); return u ? '<img src="' + u + '">' : ''; } catch (e) { return ''; }
+    };
+    const now = new Date().toLocaleString();
+    let body, title;
+
+    if (c) {
+      const obj = S.cables.find(o => o.cable === c);
+      const slot = obj ? String(obj.term.index + 1).padStart(2, '0') : '—';
+      const strip = obj ? obj.term.strip : '—';
+      const aF = assetOf(c.fromTag), aT = assetOf(c.toTag);
+      const kF = deviceKind(aF.desc || c.fromDesc, c.fromTag);
+      const kT = deviceKind(aT.desc || c.toDesc, c.toTag);
+      const far = externalEnd(c);
+      const fa = far ? assetOf(far.tag) : null;
+      const kFar = fa ? deviceKind(fa.desc || far.desc, far.tag) : null;
+
+      title = 'Cable ' + c.tag;
+      body = `
+        <div class="two">
+          <div class="end">
+            <div class="lbl">FROM</div>
+            <div class="tag">${esc2(c.fromTag || '—')}</div>
+            <div class="desc">${esc2(c.fromDesc || '')}</div>
+            <div class="loc">${esc2(c.fromLoc || '')}</div>
+            ${pic(kF, aF.desc || c.fromDesc, c.fromTag)}
+          </div>
+          <div class="mid">
+            <div class="cable">${esc2(c.tag)}</div>
+            <div class="meta">${esc2(c.cableType || '')}</div>
+            <div class="meta">${esc2(c.cores || '')} × ${esc2(c.size || '')} mm² · ${esc2(c.voltage || '')}</div>
+            <div class="meta">length ${esc2(c.length || '—')} m</div>
+            <div class="arrow">→</div>
+          </div>
+          <div class="end">
+            <div class="lbl">TO</div>
+            <div class="tag">${esc2(c.toTag || '—')}</div>
+            <div class="desc">${esc2(c.toDesc || '')}</div>
+            <div class="loc">${esc2(c.toLoc || '')}</div>
+            ${pic(kT, aT.desc || c.toDesc, c.toTag)}
+          </div>
+        </div>
+
+        <table>
+          <tr><th>Cabinet</th><td>${esc2(S.host)}</td>
+              <th>Termination</th><td>${esc2(strip)} · slot ${esc2(slot)}</td></tr>
+          <tr><th>Subsystem</th><td>${esc2(c.subsystem || '—')}</td>
+              <th>Discipline</th><td>${esc2(c.discipline || '—')}</td></tr>
+          <tr><th>Task ID</th><td>${esc2(c.taskId || '—')}</td>
+              <th>Drawing</th><td>${esc2(c.drawing || '—')}</td></tr>
+          <tr><th>Pulled</th><td>${c.pulled ? 'YES' : 'NO'}</td>
+              <th>Terminated</th><td>${c.terminated ? 'YES' : 'NO'}</td></tr>
+          <tr><th>Milestone</th><td colspan="3">${esc2(c.milestone || '—')}</td></tr>
+          ${c.remarks ? '<tr><th>Remarks</th><td colspan="3">' + esc2(c.remarks) + '</td></tr>' : ''}
+        </table>
+
+        ${far ? `
+        <h3>Far end — ${esc2(far.dir === 'FROM' ? 'source side' : 'destination side')}</h3>
+        <div class="farend">
+          ${pic(kFar, fa.desc || far.desc, far.tag)}
+          <table>
+            <tr><th>Device</th><td>${esc2(far.tag)}</td></tr>
+            <tr><th>Kind</th><td>${esc2(kFar)}</td></tr>
+            <tr><th>Description</th><td>${esc2(fa.desc || far.desc || '—')}</td></tr>
+            <tr><th>Location</th><td>${esc2(fa.loc || far.loc || '—')}</td></tr>
+          </table>
+        </div>` : ''}
+
+        <p class="foot">From → cable → To as recorded in the Cable Routing &amp; Termination Tracker. Pictures are rendered from the equipment models in the PS5 review model; assets that are not in the model use the assembled library model.</p>`;
+    } else {
+      const fams = quickFamilies();
+      const sp = scheduleProgress();
+      title = 'PS5 — work summary';
+      body = `
+        <table>
+          <tr><th>Cables in schedule</th><td>${C.length}</td>
+              <th>Pulled</th><td>${sp.pulled}</td></tr>
+          <tr><th>Terminated</th><td>${sp.term}</td>
+              <th>Assets</th><td>${RAW.assets.length}</td></tr>
+          <tr><th>In the 3D model</th><td>${Object.keys(GEO).length}</td>
+              <th>Subsystems</th><td>${new Set(C.map(x => x.subsystem).filter(Boolean)).size}</td></tr>
+        </table>
+        <h3>Families</h3>
+        <table>
+          ${fams.map(f => '<tr><th>' + esc2(f.label) + '</th><td>' + f.items.length + ' cables</td></tr>').join('')}
+        </table>
+        <p class="foot">Select a cable in the app and press Print to get its one-page route sheet.</p>`;
+    }
+
+    const css = `
+      @page { size: A4; margin: 14mm; }
+      * { box-sizing: border-box; }
+      body { font: 11px/1.45 'Segoe UI', Arial, sans-serif; color: #14222c; margin: 0; }
+      header { display: flex; align-items: baseline; border-bottom: 2px solid #14222c; padding-bottom: 6px; margin-bottom: 12px; }
+      header h1 { font-size: 16px; margin: 0; letter-spacing: .02em; }
+      header .stamp { margin-left: auto; font-size: 9px; color: #5b7284; }
+      .two { display: flex; align-items: stretch; gap: 8px; margin-bottom: 14px; }
+      .end { flex: 1; border: 1px solid #b9cbd6; border-radius: 6px; padding: 8px; background: #f6fafc; }
+      .end .lbl { font-size: 8px; letter-spacing: .16em; color: #5b7284; font-weight: 700; }
+      .end .tag { font-family: Consolas, monospace; font-size: 12px; font-weight: 700; margin: 2px 0; }
+      .end .desc { font-size: 10px; color: #24404f; }
+      .end .loc { font-size: 9px; color: #6a8290; }
+      .end img { width: 100%; height: 90px; object-fit: contain; margin-top: 6px; background: #0b1620; border-radius: 4px; }
+      .mid { width: 190px; text-align: center; display: flex; flex-direction: column; justify-content: center; }
+      .mid .cable { font-family: Consolas, monospace; font-weight: 700; font-size: 11px; }
+      .mid .meta { font-size: 9px; color: #5b7284; }
+      .mid .arrow { font-size: 20px; color: #2f7c96; }
+      table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
+      th { text-align: left; font-size: 9px; text-transform: uppercase; letter-spacing: .06em; color: #5b7284;
+           width: 22%; padding: 4px 6px; background: #eef5f9; border: 1px solid #d7e4ec; }
+      td { padding: 4px 6px; border: 1px solid #d7e4ec; font-size: 10.5px; }
+      h3 { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: #2f5d74; margin: 12px 0 5px; }
+      .farend { display: flex; gap: 10px; align-items: flex-start; }
+      .farend img { width: 130px; height: 100px; object-fit: contain; background: #0b1620; border-radius: 4px; }
+      .farend table { margin: 0; }
+      .foot { font-size: 8.5px; color: #6a8290; border-top: 1px solid #d7e4ec; padding-top: 6px; margin-top: 14px; }
+    `;
+
+    const w = window.open('', '_blank');
+    if (!w) { toast('Allow pop-ups to print', 'warn'); return; }
+    w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>' + esc2(title) + '</title><style>' + css + '</style></head><body>' +
+      '<header><h1>PS5 · ' + esc2(title) + '</h1><span class="stamp">' + esc2(now) + '</span></header>' +
+      body + '</body></html>');
+    w.document.close();
+    w.focus();
+    setTimeout(() => { try { w.print(); } catch (e) { /* user can print manually */ } }, 350);
+  }
+
+  $('#btnPrint').onclick = printSheet;
+  document.addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'p' && document.activeElement !== qEl) {
+      e.preventDefault();
+      printSheet();
+    }
+  });
+
+  $('#progRefresh').onclick = refreshProgress;
+  $('#prog').addEventListener('dblclick', () => {
+    localStorage.removeItem(PROG_LOCAL);
+    loadProgress();
+    toast('Manual figure cleared');
+  });
+  loadProgress();
+
   window.__CAB3D = {
     S: S, C: C, setHost: setHost, selectCable: selectCable, setView: setView,
     search: q => doSearch(q), refreshField: refreshField, fieldDevices: fieldDevices,
     deviceKind: deviceKind, farEndDevices: farEndDevices, assetOf: assetOf,
+    progress: { load: loadProgress, refresh: refreshProgress, schedule: scheduleProgress },
     renderer: renderer, scene: scene, camera: camera
   };
 })();

@@ -103,11 +103,20 @@
     return value;
   }
 
+  /* a real render of the whole equipment family, exported from the model */
+  function famPic(kind) {
+    const man = window.C3D_FAM || {};
+    if (!man[kind]) return null;
+    return 'data/img/fam/' + kind + '.png';
+  }
+
   /* synchronously produce the best available picture for a card */
   function thumbFor(kind, desc, tag) {
+    const fam = famPic(kind);
+    if (fam) return fam;
     const tint = (window.CAB3D_KIND_COLOR && window.CAB3D_KIND_COLOR[kind]) || 0x7f9bb0;
     return render(kind, desc, tint);
   }
 
-  window.CAB3D_PIC = { thumbFor, real, render };
+  window.CAB3D_PIC = { thumbFor, real, famPic, render };
 })();

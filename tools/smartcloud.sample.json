@@ -1,0 +1,6 @@
+{
+  "_comment": "Paste the Cookie header from your logged-in Smart Cloud browser session (F12 > Network > any request > Request Headers > Cookie). Keep this file private.",
+  "dashboard": "https://wly04-sc.intergraphsmartcloud.com/ISC/Tools/vDashboardsUsers/Switchboard.htm",
+  "subsystem": "PS5",
+  "cookie": ""
+}
