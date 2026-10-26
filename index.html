@@ -2215,7 +2215,9 @@
   }
 
   /* -------------------------------------------------- UI: subsystems browser */
-\n\n  function renderSubsystems() {
+
+
+  function renderSubsystems() {
     const subs = subsysStats();
     const total = C.length;
     S.subsystems = subs;
@@ -3233,7 +3235,9 @@
         toast('Bridge not running — showing last saved figure', 'warn');
       } else {
         showBridgeNote('bridge offline · start tools/progress_server.py');
-        const raw = prompt('Smart Cloud bridge is not running.\n\nType the PS5 completion % from the dashboard to pin it here (or Cancel):', '');
+        const raw = prompt('Smart Cloud bridge is not running.
+
+Type the PS5 completion % from the dashboard to pin it here (or Cancel):', '');
         if (raw != null && raw.trim() !== '' && isFinite(+raw)) {
           const pct = Math.max(0, Math.min(100, +raw));
           const stamp = new Date().toISOString().slice(0, 16).replace('T', ' ');
