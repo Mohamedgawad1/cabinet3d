@@ -1,0 +1,3016 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Cabinet 3D — Cable Routing &amp; Termination</title>
+<style>
+  :root{
+    --bg:#07131b; --bg2:#0a1c27; --panel:#0e2130; --panel2:#12293a;
+    --line:rgba(140,196,232,.18); --line2:rgba(140,196,232,.34);
+    --txt:#e9f4ff; --muted:#8fabbd; --cyan:#7fdcff; --blue:#8fb0ff;
+    --green:#5fe0a8; --red:#ff7186; --amber:#f7cb63; --purple:#b79cff;
+    --mono:'Cascadia Mono',Consolas,'SF Mono',monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;background:radial-gradient(1200px 800px at 50% -10%,#12303f 0%,#07131b 55%,#040c12 100%);
+    color:var(--txt);font-family:'Segoe UI',Tahoma,sans-serif;letter-spacing:.01em;overflow:hidden;
+  }
+  .app{height:100vh;display:grid;grid-template-rows:auto 1fr auto;gap:10px;padding:12px}
+
+  /* ---------- top bar ---------- */
+  .topbar{
+    display:grid;grid-template-columns:auto minmax(320px,1fr) auto;align-items:center;gap:14px;
+    background:linear-gradient(180deg,rgba(17,38,52,.96),rgba(9,20,28,.96));
+    border:1px solid var(--line2);border-radius:12px;padding:10px 14px;
+    box-shadow:0 14px 30px rgba(0,0,0,.35),inset 0 0 0 1px rgba(255,255,255,.03);
+  }
+  .brand{display:flex;align-items:center;gap:11px;white-space:nowrap}
+  .brand .dot{width:13px;height:13px;border-radius:50%;background:linear-gradient(135deg,#8ce8ff,#4f8dff);box-shadow:0 0 16px rgba(96,214,255,.8)}
+  .brand h1{font-size:.98rem;margin:0;letter-spacing:.16em;text-transform:uppercase;color:var(--cyan);font-weight:800}
+  .brand .sub{display:block;font-size:.58rem;letter-spacing:.14em;color:var(--muted);font-weight:700;margin-top:2px}
+  .ver{font-size:.56rem;font-weight:800;letter-spacing:.1em;color:var(--cyan);border:1px solid rgba(127,220,255,.3);
+       background:rgba(127,220,255,.09);padding:4px 8px;border-radius:999px}
+
+  .searchwrap{position:relative;display:flex;align-items:center;gap:10px}
+  .searchbox{flex:1;display:flex;align-items:center;gap:9px;background:rgba(15,35,49,.9);
+    border:1px solid var(--line2);border-radius:9px;padding:9px 13px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.02)}
+  .searchbox svg{flex:none;opacity:.85}
+  .searchbox input{flex:1;background:transparent;border:0;outline:0;color:var(--txt);font-size:.92rem;font-family:var(--mono)}
+  .searchbox input::placeholder{color:rgba(143,171,189,.75);font-family:'Segoe UI',sans-serif}
+  .kbd{font-family:var(--mono);font-size:.6rem;color:var(--muted);border:1px solid var(--line);border-radius:4px;padding:1px 5px}
+  .iconbtn{background:rgba(127,220,255,.08);border:1px solid rgba(127,220,255,.25);color:var(--cyan);
+    border-radius:8px;padding:8px 11px;cursor:pointer;font-size:.68rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;transition:.18s}
+  .iconbtn:hover{background:rgba(127,220,255,.16);transform:translateY(-1px)}
+  .iconbtn.ghost{background:rgba(255,255,255,.03);border-color:rgba(255,255,255,.1);color:var(--muted)}
+
+  .viewbar{display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+  .vbtn{background:rgba(18,41,58,.9);border:1px solid var(--line);color:var(--muted);border-radius:7px;
+    padding:7px 9px;font-size:.63rem;font-weight:800;letter-spacing:.08em;cursor:pointer;text-transform:uppercase;transition:.16s}
+  .vbtn:hover{color:var(--cyan);border-color:rgba(127,220,255,.45)}
+  .vbtn.active{color:#062231;background:linear-gradient(180deg,#9fe9ff,#5cc7f2);border-color:#9fe9ff;box-shadow:0 0 14px rgba(94,199,242,.45)}
+
+  /* ---------- main ---------- */
+  .main{display:grid;grid-template-columns:330px minmax(0,1fr) 372px;gap:10px;min-height:0}
+  .panel{background:linear-gradient(180deg,rgba(14,33,48,.96),rgba(8,19,26,.97));border:1px solid var(--line2);
+    border-radius:12px;display:flex;flex-direction:column;min-height:0;overflow:hidden;box-shadow:0 12px 26px rgba(0,0,0,.3)}
+  .ph{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:11px 13px;border-bottom:1px solid var(--line);
+    background:rgba(18,41,58,.85);font-size:.66rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--cyan)}
+  .ph .count{font-family:var(--mono);font-size:.62rem;color:var(--muted);letter-spacing:.04em}
+
+  .tabs{display:flex;gap:6px;padding:9px 10px 0}
+  .tab{flex:1;text-align:center;padding:7px 6px;font-size:.63rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--muted);border:1px solid var(--line);border-bottom:0;border-radius:8px 8px 0 0;cursor:pointer;background:rgba(255,255,255,.02)}
+  .tab.active{color:var(--cyan);background:rgba(127,220,255,.1);border-color:rgba(127,220,255,.4)}
+  .tab .n{font-family:var(--mono);opacity:.8;font-size:.6rem}
+
+  .filters{display:flex;flex-wrap:wrap;gap:5px;padding:9px 10px;border-bottom:1px solid var(--line)}
+  .chipf{padding:5px 9px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.02);
+    color:var(--muted);font-size:.6rem;font-weight:800;letter-spacing:.08em;cursor:pointer;text-transform:uppercase}
+  .chipf.active{color:var(--cyan);border-color:rgba(127,220,255,.45);background:rgba(127,220,255,.12)}
+  .chipf .k{font-family:var(--mono);opacity:.75}
+
+  .list{flex:1;overflow:auto;padding:9px 10px 14px;scrollbar-width:thin;scrollbar-color:rgba(127,220,255,.3) transparent}
+  .list::-webkit-scrollbar{width:8px}
+  .list::-webkit-scrollbar-thumb{background:rgba(127,220,255,.22);border-radius:8px}
+  .card{border:1px solid rgba(255,255,255,.05);background:rgba(19,42,58,.72);border-radius:9px;padding:9px 10px;margin-bottom:7px;cursor:pointer;transition:.15s}
+  .card:hover{border-color:rgba(127,220,255,.45);transform:translateX(2px)}
+  .card.sel{border-color:rgba(127,220,255,.85);background:rgba(22,54,76,.95);box-shadow:inset 0 0 0 1px rgba(127,220,255,.2),0 6px 18px rgba(0,0,0,.3)}
+  .card .t{display:flex;justify-content:space-between;gap:8px;align-items:center}
+  .card .tag{font-family:var(--mono);font-size:.76rem;font-weight:700;color:#d9efff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .card .route{font-size:.63rem;color:var(--muted);margin-top:5px;line-height:1.5;word-break:break-word}
+  .card .route b{color:#bcd9ea;font-weight:700;font-family:var(--mono);font-size:.62rem}
+  .badge{font-size:.52rem;font-weight:800;letter-spacing:.08em;padding:3px 6px;border-radius:999px;border:1px solid transparent;white-space:nowrap;text-transform:uppercase}
+  .b-green{color:var(--green);background:rgba(95,224,168,.1);border-color:rgba(95,224,168,.28)}
+  .b-red{color:var(--red);background:rgba(255,113,134,.1);border-color:rgba(255,113,134,.3)}
+  .b-blue{color:var(--blue);background:rgba(143,176,255,.1);border-color:rgba(143,176,255,.3)}
+  .b-amber{color:var(--amber);background:rgba(247,203,99,.1);border-color:rgba(247,203,99,.3)}
+  .b-gray{color:var(--muted);background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.12)}
+  .b-violet{color:#c9a4ff;background:rgba(176,124,240,.12);border-color:rgba(176,124,240,.32)}
+  .b-teal{color:#67d3c3;background:rgba(103,211,195,.1);border-color:rgba(103,211,195,.32)}
+  .chain{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:stretch;margin:10px 0 6px}
+  .chainbox{background:rgba(10,26,36,.75);border:1px solid rgba(127,220,255,.16);border-radius:10px;padding:8px;
+    display:flex;flex-direction:column;gap:2px;min-width:0}
+  .chainbox.here{border-color:rgba(127,220,255,.55);box-shadow:0 0 0 1px rgba(127,220,255,.18),0 0 18px rgba(92,199,242,.18)}
+  .chainbox.rem{border-color:rgba(255,113,134,.45);background:rgba(40,12,18,.6)}
+  .chainbox.ref{border-color:rgba(103,211,195,.38);background:rgba(10,34,34,.55)}
+  .chainbox .cl{font-size:.56rem;letter-spacing:.18em;font-weight:800;color:var(--muted)}
+  .chainbox .ct{font-family:var(--mono);font-size:.74rem;color:#dff4ff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .chainbox .cs{font-size:.63rem;color:#93b2c4;line-height:1.25;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+  .chainbox .cl2{font-size:.6rem;color:#6f8ea0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .chainmid{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-width:96px}
+  .chainmid .arrow{color:var(--cyan);font-size:1rem;line-height:1}
+  .chainmid .cabletag{font-family:var(--mono);font-size:.66rem;color:#9fe9ff;text-align:center;word-break:break-all}
+  .chainmid .cablesub{font-size:.56rem;color:var(--muted);text-align:center}
+  .grouphead{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:12px 0 6px;
+    font-size:.63rem;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:rgba(159,233,255,.8)}
+  .grouphead:first-child{margin-top:0}
+  .grouphead:before{content:'';flex:1;height:1px;background:linear-gradient(90deg,rgba(127,220,255,.35),transparent);
+    order:-1;display:none}
+  .empty{padding:16px 12px;border:1px dashed var(--line2);border-radius:10px;color:var(--muted);font-size:.75rem;line-height:1.7}
+
+  /* ---------- stage ---------- */
+  .stage{position:relative;border:1px solid var(--line2);border-radius:12px;overflow:hidden;min-height:360px;
+    background:radial-gradient(900px 600px at 50% 10%,#12293a,#081720 60%,#040c12 100%);
+    box-shadow:inset 0 0 90px rgba(0,0,0,.55)}
+  #view{position:absolute;inset:0}
+  #view canvas{display:block}
+  .stage-tools{position:absolute;left:12px;top:12px;display:flex;flex-direction:column;gap:6px;z-index:5}
+  .tool{display:flex;align-items:center;gap:7px;background:rgba(8,20,28,.82);border:1px solid var(--line2);
+    color:var(--muted);border-radius:8px;padding:6px 9px;font-size:.61rem;font-weight:800;letter-spacing:.09em;
+    cursor:pointer;text-transform:uppercase;backdrop-filter:blur(6px);transition:.16s}
+  .tool:hover{color:var(--cyan);border-color:rgba(127,220,255,.5)}
+  .tool.on{color:#04222f;background:linear-gradient(180deg,#9fe9ff,#5cc7f2);border-color:#9fe9ff}
+  .tool .sw{width:9px;height:9px;border-radius:2px;background:currentColor;opacity:.85}
+
+  .hostbar{position:absolute;right:12px;top:12px;z-index:5;display:flex;flex-direction:column;gap:6px;align-items:flex-end;max-width:62%}
+  .hostpill{display:flex;align-items:center;gap:8px;background:rgba(8,20,28,.84);border:1px solid var(--line2);
+    border-radius:9px;padding:7px 10px;backdrop-filter:blur(6px)}
+  .hostpill .lbl{font-size:.55rem;letter-spacing:.12em;color:var(--muted);font-weight:800;text-transform:uppercase}
+  .hostpill select{background:rgba(19,42,58,.9);color:var(--cyan);border:1px solid rgba(127,220,255,.25);border-radius:6px;
+    padding:4px 6px;font-family:var(--mono);font-size:.68rem;max-width:330px;outline:none}
+
+  .legend{position:absolute;left:12px;bottom:12px;z-index:5;display:flex;gap:10px;flex-wrap:wrap;
+    background:rgba(8,20,28,.8);border:1px solid var(--line);border-radius:9px;padding:7px 10px;backdrop-filter:blur(6px)}
+  .lg{display:flex;align-items:center;gap:5px;font-size:.57rem;letter-spacing:.06em;color:var(--muted);font-weight:700;text-transform:uppercase}
+  .lg i{width:16px;height:4px;border-radius:3px;display:block}
+  .legend.kinds{bottom:52px;display:none}
+  .legend.kinds.on{display:flex}
+  .legend.kinds .lg i{width:9px;height:9px;border-radius:50%}
+
+  .hint{position:absolute;right:12px;bottom:12px;z-index:5;font-size:.57rem;color:var(--muted);letter-spacing:.06em;
+    background:rgba(8,20,28,.75);border:1px solid var(--line);border-radius:8px;padding:6px 9px;font-family:var(--mono)}
+  .tooltip{position:absolute;z-index:20;pointer-events:none;background:rgba(6,18,26,.95);border:1px solid rgba(127,220,255,.4);
+    border-radius:7px;padding:5px 8px;font-size:.64rem;font-family:var(--mono);color:#dff3ff;transform:translate(12px,-50%);display:none;white-space:nowrap}
+
+  /* ---------- details ---------- */
+  .details{flex:1;overflow:auto;padding:13px;scrollbar-width:thin}
+  .details::-webkit-scrollbar{width:8px}
+  .details::-webkit-scrollbar-thumb{background:rgba(127,220,255,.22);border-radius:8px}
+  .dtitle{font-family:var(--mono);font-size:.96rem;font-weight:700;color:#e6f6ff;line-height:1.35;word-break:break-word}
+  .dchips{display:flex;gap:5px;flex-wrap:wrap;margin:9px 0 12px}
+  .sect{margin-top:13px}
+  .sect h4{margin:0 0 6px;font-size:.57rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:800}
+  .kv{display:grid;grid-template-columns:1fr auto;gap:8px;padding:6px 8px;border-radius:7px;background:rgba(19,42,58,.6);
+    border:1px solid rgba(255,255,255,.04);font-size:.72rem;margin-bottom:4px;align-items:start}
+  .kv .k{color:var(--muted);font-size:.62rem;letter-spacing:.07em;text-transform:uppercase;font-weight:800}
+  .kv .v{font-family:var(--mono);font-weight:600;text-align:right;color:#dceeff;max-width:64%;word-break:break-word;line-height:1.45}
+  .endpoint{border:1px solid rgba(255,255,255,.05);border-radius:9px;padding:8px 9px;background:rgba(19,42,58,.62);margin-bottom:6px}
+  .endpoint .lbl{font-size:.54rem;letter-spacing:.14em;color:var(--muted);font-weight:800;text-transform:uppercase}
+  .endpoint .tg{font-family:var(--mono);font-size:.78rem;color:var(--cyan);margin-top:2px;word-break:break-all}
+  .endpoint .ds{font-size:.67rem;color:#a9c4d6;margin-top:3px;line-height:1.5}
+  .endpoint .lc{font-size:.62rem;color:var(--muted);margin-top:2px}
+  .warn{margin-top:9px;padding:8px 9px;border-radius:8px;font-size:.65rem;line-height:1.6;
+    background:rgba(255,113,134,.08);border:1px solid rgba(255,113,134,.28);color:#ffc3cd}
+  .ok{margin-top:9px;padding:8px 9px;border-radius:8px;font-size:.65rem;line-height:1.6;
+    background:rgba(95,224,168,.08);border:1px solid rgba(95,224,168,.25);color:#b6f4d9}
+  .note{margin-top:9px;padding:8px 9px;border-radius:8px;font-size:.62rem;line-height:1.6;
+    background:rgba(143,176,255,.07);border:1px solid rgba(143,176,255,.22);color:#c3d3ff}
+  .btnrow{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+  .btn{flex:1;min-width:96px;background:rgba(127,220,255,.1);border:1px solid rgba(127,220,255,.3);color:var(--cyan);
+    border-radius:8px;padding:8px;font-size:.6rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;cursor:pointer}
+  .btn:hover{background:rgba(127,220,255,.2)}
+  .btn.muted{background:rgba(255,255,255,.03);border-color:rgba(255,255,255,.12);color:var(--muted)}
+
+  /* ---------- bottom ---------- */
+  .status{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+  .stat{background:linear-gradient(180deg,rgba(16,36,50,.95),rgba(8,19,26,.95));border:1px solid var(--line);
+    border-radius:9px;padding:8px 11px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .stat .k{font-size:.55rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:800}
+  .stat .v{font-family:var(--mono);font-size:.92rem;font-weight:700;color:#dff3ff}
+  .stat.warn .v{color:var(--amber)} .stat.bad .v{color:var(--red)} .stat.good .v{color:var(--green)}
+
+  @media (max-width:1400px){ .main{grid-template-columns:300px minmax(0,1fr) 330px} }
+  @media (max-width:1150px){
+    .main{grid-template-columns:1fr;grid-template-rows:1fr}
+    .panel.left,.panel.right{display:none}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header class="topbar">
+    <div class="brand">
+      <span class="dot"></span>
+      <div>
+        <h1>Cabinet 3D</h1>
+        <span class="sub">Cable Routing &amp; Termination Trace</span>
+      </div>
+      <span class="ver">v1.0</span>
+    </div>
+
+    <div class="searchwrap">
+      <div class="searchbox">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="10.5" cy="10.5" r="6.5" stroke="#8fb6ca" stroke-width="1.8"/><path d="M15.6 15.6 21 21" stroke="#8fb6ca" stroke-width="1.8" stroke-linecap="round"/></svg>
+        <input id="q" type="text" placeholder="Search cable / asset tag / junction box / task ID / subsystem / location…" autocomplete="off" spellcheck="false"/>
+        <span class="kbd">/</span>
+      </div>
+      <button class="iconbtn ghost" id="btnCsv" title="Export current list to CSV">CSV</button>
+      <button class="iconbtn ghost" id="btnPng" title="Save PNG snapshot">PNG</button>
+    </div>
+
+    <div class="viewbar" id="viewbar">
+      <button class="vbtn active" data-view="iso">Iso</button>
+      <button class="vbtn" data-view="front">Front</button>
+      <button class="vbtn" data-view="back">Back</button>
+      <button class="vbtn" data-view="left">Left</button>
+      <button class="vbtn" data-view="right">Right</button>
+      <button class="vbtn" data-view="top">Top</button>
+      <button class="vbtn" data-view="inside">Inside</button>
+      <button class="vbtn" data-view="field">Field</button>
+      <button class="vbtn" data-view="fit">Fit</button>
+    </div>
+  </header>
+
+  <div class="main">
+    <!-- LEFT -->
+    <aside class="panel left">
+      <div class="ph"><span id="listTitle">Cables in this cabinet</span><span class="count" id="listCount">0</span></div>
+      <div class="tabs">
+        <div class="tab" data-tab="scope">Cabinet <span class="n" id="nScope">0</span></div>
+        <div class="tab" data-tab="pins">Pins <span class="n" id="nPins">0</span></div>
+        <div class="tab" data-tab="devices">Devices <span class="n" id="nDevices">0</span></div>
+        <div class="tab" data-tab="subs">Subs <span class="n" id="nSubs">0</span></div>
+        <div class="tab" data-tab="results">Search <span class="n" id="nResults">0</span></div>
+        <div class="tab" data-tab="rem">REM <span class="n" id="nRem">0</span></div>
+      </div>
+      <div class="filters" id="filters"></div>
+      <div class="list" id="list"></div>
+    </aside>
+
+    <!-- STAGE -->
+    <section class="stage">
+      <div id="view"></div>
+
+      <div class="stage-tools">
+        <button class="tool on" id="tWires"><span class="sw"></span>Cables</button>
+        <button class="tool on" id="tField"><span class="sw"></span>Field end</button>
+        <button class="tool" id="tLabels"><span class="sw"></span>Labels</button>
+        <button class="tool" id="tTags"><span class="sw"></span>Tags</button>
+        <button class="tool" id="tDoors"><span class="sw"></span>Doors</button>
+        <button class="tool" id="tXray"><span class="sw"></span>X-Ray</button>
+        <button class="tool" id="tSpin"><span class="sw"></span>Auto spin</button>
+        <button class="tool on" id="tFx"><span class="sw"></span>Glow</button>
+        <button class="tool" id="tModel" title="Load a skid / plant model exported from Navisworks or Revit (GLB, GLTF, OBJ)">Load 3D model</button>
+        <input id="modelFile" type="file" accept=".glb,.gltf,.obj" style="display:none"/>
+      </div>
+
+      <div class="hostbar">
+        <div class="hostpill">
+          <span class="lbl">Cabinet</span>
+          <select id="hostSel"></select>
+        </div>
+        <div class="hostpill">
+          <span class="lbl">Route</span>
+          <select id="routeSel">
+            <option value="auto">Auto (best fit)</option>
+            <option value="left">Left duct</option>
+            <option value="right">Right duct</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="legend">
+        <div class="lg"><i style="background:#e05252"></i>400V</div>
+        <div class="lg"><i style="background:#4f8ff7"></i>230V</div>
+        <div class="lg"><i style="background:#35c98a"></i>Instrument</div>
+        <div class="lg"><i style="background:#b07cf0"></i>Telecom</div>
+        <div class="lg"><i style="background:#f5c451"></i>Lighting</div>
+        <div class="lg"><i style="background:#ff7186"></i>REM / missing</div>
+      </div>
+      <div class="legend kinds" id="kindLegend"></div>
+      <div class="hint">drag = orbit · wheel = zoom · click cable = trace · F = far end</div>
+      <div class="tooltip" id="tip"></div>
+    </section>
+
+    <!-- RIGHT -->
+    <aside class="panel right">
+      <div class="ph"><span>Connection details</span><span class="count" id="detailTag">—</span></div>
+      <div class="details" id="details">
+        <div class="empty">Search a cable tag, a panel or a device to see its route, cabinet landing point and termination details.</div>
+      </div>
+    </aside>
+  </div>
+
+  <footer class="status" id="status"></footer>
+</div>
+
+<script src="lib/three.min.js"></script>
+<script src="lib/OrbitControls.js"></script>
+<script src="lib/CopyShader.js"></script>
+<script src="lib/LuminosityHighPassShader.js"></script>
+<script src="lib/EffectComposer.js"></script>
+<script src="lib/RenderPass.js"></script>
+<script src="lib/ShaderPass.js"></script>
+<script src="lib/UnrealBloomPass.js"></script>
+<script src="lib/GLTFLoader.js"></script>
+<script src="lib/OBJLoader.js"></script>
+<script src="js/devices.js"></script>
+<script src="js/pics.js"></script>
+<script src="data/geo.js"></script>
+<script src="data/cables.js"></script>
+<script>
+/* =========================================================================
+   Cabinet 3D — data driven cable routing / termination viewer
+   Data: Cable_Routing_Termination_Tracker.xlsx  (Cables Master)
+        asset_locations_data.json               (3D model inventory)
+   ========================================================================= */
+(function () {
+  'use strict';
+
+  /* ------------------------------------------------------------------ data */
+  const RAW = window.C3D_DATA;
+  const COLS = RAW.columns;
+  const C = RAW.rows.map(r => { const o = {}; COLS.forEach((k, i) => o[k] = r[i]); return o; });
+
+  const N = s => String(s == null ? '' : s).toUpperCase().replace(/[^A-Z0-9]/g, '');
+
+  const ASSETS = new Map();
+  RAW.assets.forEach(a => ASSETS.set(a.tag, a));
+  // make sure every endpoint tag exists
+  C.forEach(c => {
+    [c.fromTag, c.toTag].forEach(t => {
+      if (t && !ASSETS.has(t)) ASSETS.set(t, { tag: t, desc: '', loc: '', in: 0, out: 0, count: 0, inModel: false });
+    });
+  });
+
+  const assetOf = tag => ASSETS.get(tag) || { tag: tag, desc: '', loc: '', count: 0, inModel: false, refs: 0 };
+
+  /* presence in the Smart Completions asset export (ovTasks → asset_locations_data.json):
+       body — the export has its own record with this exact tag
+       ref  — the tag only appears inside other records' names/descriptions
+              (e.g. "PS5-60-BE-0002-CL01", "BF_… → PS5-60-BE-0002 - Battery Charger - JB")
+       none — nothing in the export mentions the tag
+     This is a records check, not an NWD geometry check: a device can be modelled
+     in the NWD and still be absent from this export (that is why a missing record
+     must not be called "not in the 3D model"). */
+  const MS = { BODY: 'body', REF: 'ref', NONE: 'none' };
+  const MS_TEXT = { body: 'IN MODEL', ref: 'IN MODEL · TAG', none: 'REM' };
+  const MS_SHORT = { body: 'IN MODEL', ref: 'MODEL TAG', none: 'REM' };
+  const MS_BADGE = { body: 'b-blue', ref: 'b-teal', none: 'b-red' };
+  const MS_SOURCE = 'Presence is checked against the Smart Completions asset export (12,229 records). It is not a geometry check — a device missing there can still exist in the NWD.';
+  function modelState(a) {
+    if (!a) return MS.NONE;
+    if (a.inModel) return MS.BODY;
+    if (a.refs > 0) return MS.REF;
+    return MS.NONE;
+  }
+  /* worst of two ends: a cable is only REM when an end has nothing in the model */
+  function joinState(sa, sb) {
+    if (sa === MS.NONE || sb === MS.NONE) return MS.NONE;
+    if (sa === MS.REF || sb === MS.REF) return MS.REF;
+    return MS.BODY;
+  }
+
+  const PLACEHOLDER = /^(NOTAVAILABLE|NA|NONE|TBD|TBA|UNKNOWN|NOTAPPLICABLE|NIL|XX?)$/;
+  const isBadTag = t => !t || N(t).length < 3 || PLACEHOLDER.test(N(t));
+
+  const isPanelish = a => /(PANEL|BOARD|CABINET|SWGR|SWITCHGEAR|SWITCHBOARD|MCC|DB\b|JB\b|JUNCTION|RACK|CONTROL|SCADA|PLC|UPS)/i.test((a.desc || '') + ' ' + a.tag);
+
+  function hostScore(a) {
+    let s = 0;
+    if (a.inModel) s += 100;
+    if (isPanelish(a)) s += 50;
+    s += Math.min(a.count, 400) / 20;
+    return s;
+  }
+
+  function bestHostAsset(cable) {
+    const cands = [assetOf(cable.fromTag), assetOf(cable.toTag)].filter(a => !isBadTag(a.tag) && a.count > 0);
+    if (!cands.length) return null;
+    cands.sort((a, b) => hostScore(b) - hostScore(a));
+    return cands[0];
+  }
+
+  /* --------------------------------------------- search indexes (all fields) */
+  const LOC_INDEX = new Map();
+  const TASK_INDEX = new Map();
+  const SUB_INDEX = new Map();
+  C.forEach(c => {
+    [c.fromLoc, c.toLoc].forEach(l => {
+      l = String(l || '').trim();
+      if (l && l.length > 2) LOC_INDEX.set(l, (LOC_INDEX.get(l) || 0) + 1);
+    });
+    const t = String(c.taskId || '').trim();
+    if (t) TASK_INDEX.set(t, (TASK_INDEX.get(t) || 0) + 1);
+    const s = String(c.subsystem || '').trim();
+    if (s) SUB_INDEX.set(s, (SUB_INDEX.get(s) || 0) + 1);
+  });
+
+  /* --------------------------------------------------------------- helpers */
+  const $ = s => document.querySelector(s);
+  const el = (t, c, h) => { const e = document.createElement(t); if (c) e.className = c; if (h != null) e.innerHTML = h; return e; };
+  const fmt = v => (v === '' || v == null ? '—' : String(v));
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[m]));
+
+  function cableColor(c) {
+    if (c.discipline === 'I') return 0x35c98a;
+    if (c.discipline === 'T') return 0xb07cf0;
+    if (c.discipline === 'LTG') return 0xf5c451;
+    if (/400/.test(c.voltage)) return 0xe05252;
+    if (/230|240|220/.test(c.voltage)) return 0x4f8ff7;
+    if (/110|24|48/.test(c.voltage)) return 0x63d9d2;
+    return 0x7ea8c4;
+  }
+  const cssColor = n => '#' + n.toString(16).padStart(6, '0');
+
+  /* ------------------------------------------------------------ app state */
+  const S = {
+    host: null,
+    tab: 'scope',
+    filter: 'ALL',
+    query: '',
+    selCable: null,
+    selDevice: null,
+    doors: 0,           // 0 closed .. 1 open
+    doorTarget: 0,
+    showWires: true,
+    showLabels: false,
+    fieldMode: 'sel',   // off | sel | all  (show the far end of the cable)
+    devKindFilter: 'ALL',
+    xray: false,
+    spin: false,
+    view: 'iso',
+    scope: [],          // cables attached to host
+    cables: [],         // 3D cable objects currently built
+    terminals: [],      // terminal slot meshes
+    devices: [],        // device meshes
+    results: [],
+    remAssets: [],
+    refCableList: []
+  };
+
+  /* ------------------------------------------------------- scene bootstrap */
+  const stageEl = $('#view');
+  const scene = new THREE.Scene();
+  const FOG = new THREE.Fog(0x061019, 260, 620);
+  scene.fog = FOG;
+
+  const camera = new THREE.PerspectiveCamera(34, 1, 1, 4000);
+  camera.position.set(105, 92, 138);
+
+  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+
+  /* detect low-end integrated GPUs (Intel HD/UHD, software rasterisers) and
+     trade a little polish for interactivity on the site laptops */
+  const GPU_NAME = (() => {
+    try {
+      const gl = renderer.getContext();
+      const dbg = gl.getExtension('WEBGL_debug_renderer_info');
+      return dbg ? String(gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL)) : '';
+    } catch (e) { return ''; }
+  })();
+  const LOW_END = /HD Graphics|UHD Graphics|Iris\(TM\)|SwiftShader|llvmpipe|software/i.test(GPU_NAME);
+
+  renderer.setPixelRatio(LOW_END ? 1 : Math.min(devicePixelRatio, 2));
+  renderer.outputEncoding = THREE.sRGBEncoding;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.06;
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = LOW_END ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap;
+  stageEl.appendChild(renderer.domElement);
+
+  const controls = new THREE.OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.07;
+  controls.target.set(0, 44, 0);
+  controls.minDistance = 26;
+  controls.maxDistance = 420;
+  controls.maxPolarAngle = Math.PI * 0.92;
+
+  /* post processing (soft bloom) */
+  let composer = null, bloomPass = null, fxOn = true;
+  try {
+    if (THREE.EffectComposer && THREE.RenderPass && THREE.UnrealBloomPass) {
+      composer = new THREE.EffectComposer(renderer);
+      composer.addPass(new THREE.RenderPass(scene, camera));
+      bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(1, 1), 0.45, 0.55, 0.85);
+      composer.addPass(bloomPass);
+    }
+  } catch (err) { composer = null; }
+
+  /* lights */
+  scene.add(new THREE.HemisphereLight(0xa6d4ff, 0x050d12, 0.5));
+
+  const key = new THREE.DirectionalLight(0xffffff, 1.25);
+  key.position.set(95, 130, 115);
+  key.castShadow = true;
+  key.shadow.mapSize.set(LOW_END ? 1024 : 2048, LOW_END ? 1024 : 2048);
+  key.shadow.camera.near = 20; key.shadow.camera.far = 420;
+  key.shadow.camera.left = -90; key.shadow.camera.right = 90;
+  key.shadow.camera.top = 120; key.shadow.camera.bottom = -40;
+  key.shadow.bias = -0.0006;
+  scene.add(key);
+
+  const fill = new THREE.DirectionalLight(0x6ec2ff, 0.34);
+  fill.position.set(-120, 70, 90);
+  scene.add(fill);
+
+  const rim = new THREE.DirectionalLight(0x9ab4ff, 0.6);
+  rim.position.set(-70, 50, -140);
+  scene.add(rim);
+
+  const glow = new THREE.PointLight(0x6fe4ff, 0.45, 200, 2);
+  glow.position.set(0, 52, 46);
+  scene.add(glow);
+
+  /* studio floor (dark, soft radial falloff) */
+  function radialTexture(inner, outer) {
+    const s = 512, cv = document.createElement('canvas');
+    cv.width = cv.height = s;
+    const ctx = cv.getContext('2d');
+    const g = ctx.createRadialGradient(s / 2, s / 2, s * 0.04, s / 2, s / 2, s * 0.5);
+    g.addColorStop(0, inner); g.addColorStop(0.55, outer); g.addColorStop(1, 'rgba(3,8,12,0)');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, s, s);
+    const t = new THREE.CanvasTexture(cv);
+    t.encoding = THREE.sRGBEncoding;
+    return t;
+  }
+
+  const floor = new THREE.Mesh(
+    new THREE.CircleGeometry(320, 72),
+    new THREE.MeshBasicMaterial({ map: radialTexture('#1a2b38', '#0a1822'), transparent: true, depthWrite: false })
+  );
+  floor.rotation.x = -Math.PI / 2;
+  floor.position.y = -0.05;
+  scene.add(floor);
+
+  const grid = new THREE.GridHelper(680, 68, 0x1c4a5f, 0x0f2531);
+  grid.position.y = 0.01;
+  grid.material.opacity = 0.45; grid.material.transparent = true;
+  grid.material.depthWrite = false;
+  scene.add(grid);
+
+  /* contact shadow under the cabinet */
+  const soft = new THREE.Mesh(
+    new THREE.PlaneGeometry(150, 130),
+    new THREE.MeshBasicMaterial({ map: radialTexture('rgba(0,0,0,0.85)', 'rgba(0,0,0,0.35)'), transparent: true, depthWrite: false })
+  );
+  soft.rotation.x = -Math.PI / 2;
+  soft.position.set(0, 0.05, 6);
+  scene.add(soft);
+
+  /* --------------------------------------------------------------- cabinet */
+  const CAB = { W: 60, H: 80, D: 26 };
+  const cabinet = new THREE.Group();
+  scene.add(cabinet);
+
+  const MAT = {
+    shell: new THREE.MeshStandardMaterial({ color: 0x9fb0bf, metalness: 0.72, roughness: 0.38 }),
+    shellDark: new THREE.MeshStandardMaterial({ color: 0x6d7d8b, metalness: 0.7, roughness: 0.45 }),
+    plate: new THREE.MeshStandardMaterial({ color: 0xcbd4dc, metalness: 0.45, roughness: 0.55 }),
+    device: new THREE.MeshStandardMaterial({ color: 0xdfe4e9, metalness: 0.25, roughness: 0.5 }),
+    deviceDark: new THREE.MeshStandardMaterial({ color: 0x2b333b, metalness: 0.35, roughness: 0.6 }),
+    rail: new THREE.MeshStandardMaterial({ color: 0xb6c1cb, metalness: 0.9, roughness: 0.28 }),
+    duct: new THREE.MeshStandardMaterial({ color: 0xa9b6c1, metalness: 0.35, roughness: 0.6 }),
+    ductSlot: new THREE.MeshStandardMaterial({ color: 0x2c3944, metalness: 0.2, roughness: 0.85 }),
+    terminal: new THREE.MeshStandardMaterial({ color: 0xb9c2ca, metalness: 0.3, roughness: 0.55 }),
+    led: new THREE.MeshStandardMaterial({ color: 0x0e2a22, emissive: 0x37ffb0, emissiveIntensity: 2.2 }),
+    glass: new THREE.MeshStandardMaterial({ color: 0x8fd8ff, metalness: 0.1, roughness: 0.1, transparent: true, opacity: 0.12, side: THREE.DoubleSide })
+  };
+
+  const wireGeo = new THREE.BoxGeometry(1, 1, 1);
+  function box(w, h, d, mat, x, y, z, parent) {
+    const m = new THREE.Mesh(wireGeo, mat);
+    m.scale.set(w, h, d); m.position.set(x, y, z);
+    m.castShadow = true; m.receiveShadow = true;
+    (parent || cabinet).add(m);
+    return m;
+  }
+  function edges(mesh, color, op) {
+    const g = new THREE.EdgesGeometry(mesh.geometry, 28);
+    const l = new THREE.LineSegments(g, new THREE.LineBasicMaterial({ color: color || 0x8fe3ff, transparent: true, opacity: op || 0.22 }));
+    l.scale.copy(mesh.scale); l.position.copy(mesh.position); l.rotation.copy(mesh.rotation);
+    (mesh.parent || cabinet).add(l);
+    return l;
+  }
+
+  /* --- enclosure --- */
+  const shellGroup = new THREE.Group(); cabinet.add(shellGroup);
+  const backPanel = box(58.6, 78, 1.2, MAT.shell, 0, 39.4, -12.4, shellGroup);
+  const leftWall  = box(1.2, 78, 26, MAT.shell, -29.4, 39.4, 0, shellGroup);
+  const rightWall = box(1.2, 78, 26, MAT.shell, 29.4, 39.4, 0, shellGroup);
+  const topPanel  = box(60, 1.2, 26, MAT.shell, 0, 79.4, 0, shellGroup);
+  const botPanel  = box(60, 1.2, 26, MAT.shellDark, 0, 1.0, 0, shellGroup);
+  const plinth    = box(60, 2.0, 26, MAT.shellDark, 0, 0.0, 0, shellGroup);
+  edges(backPanel); edges(leftWall); edges(rightWall); edges(topPanel); edges(botPanel);
+
+  /* front frame */
+  box(60, 1.4, 1.6, MAT.shellDark, 0, 78.6, 12.4, shellGroup);
+  box(60, 1.4, 1.6, MAT.shellDark, 0, 2.4, 12.4, shellGroup);
+  box(1.6, 76, 1.6, MAT.shellDark, -28.9, 40.4, 12.4, shellGroup);
+  box(1.6, 76, 1.6, MAT.shellDark, 28.9, 40.4, 12.4, shellGroup);
+  box(1.6, 76, 1.6, MAT.shellDark, 0, 40.4, 12.4, shellGroup);
+
+  /* mounting plate */
+  const plate = box(56, 72, 0.6, MAT.plate, 0, 42, -11.6);
+  edges(plate, 0x9fd6ff, 0.12);
+
+  /* doors */
+  function makeDoor(sign) {
+    const pivot = new THREE.Group();
+    pivot.position.set(sign * 29.6, 40.4, 12.6);
+    const leaf = box(29.2, 74.4, 1.6, MAT.shell, -sign * 14.6, 0, 0, pivot);
+    edges(leaf, 0x7fd3ff, 0.18);
+    // stiffening ribs
+    box(24, 1.0, 1.8, MAT.shellDark, -sign * 14.6, 26, 0.2, pivot);
+    box(24, 1.0, 1.8, MAT.shellDark, -sign * 14.6, -26, 0.2, pivot);
+    // handle
+    const h = box(1.2, 7, 1.4, MAT.deviceDark, -sign * 2.6, -2, 1.6, pivot);
+    h.material = MAT.deviceDark;
+    // badge
+    box(11, 3.2, 0.6, MAT.deviceDark, -sign * 14.6, 30, 1.1, pivot);
+    cabinet.add(pivot);
+    return pivot;
+  }
+  const doorL = makeDoor(-1);
+  const doorR = makeDoor(1);
+  const doors = [doorL, doorR];
+
+  /* --- ventilation grills on side walls --- */
+  function grill(x, dir) {
+    for (let i = 0; i < 9; i++) {
+      box(0.5, 1.0, 12, MAT.ductSlot, x, 14 + i * 1.9, 0);
+    }
+  }
+  grill(-29.85, -1); grill(29.85, 1);
+
+  /* --- vertical cable ducts (trunking) --- */
+  const DUCT_X = 25.0;
+  const ducts = [];
+  [-1, 1].forEach(sgn => {
+    const x = sgn * DUCT_X;
+    const d = box(8, 66, 6, MAT.duct, x, 42, -7.6);
+    ducts.push(d);
+    // fingers / slots (front face)
+    for (let y = 10; y <= 74; y += 2.2) {
+      box(7.4, 1.1, 0.35, MAT.ductSlot, x, y, -4.55);
+    }
+    // cover
+    box(8.4, 0.8, 6.4, MAT.duct, x, 75.4, -7.6);
+    box(8.4, 0.8, 6.4, MAT.duct, x, 8.6, -7.6);
+  });
+  /* horizontal duct at the bottom */
+  const ductH = box(42, 6, 6, MAT.duct, 0, 8.6, -7.6);
+  for (let x = -20; x <= 20; x += 2.2) box(1.1, 5.4, 0.35, MAT.ductSlot, x, 8.6, -4.55);
+
+  /* --- DIN rails --- */
+  const rails = [68, 54, 44, 36, 28, 20];
+  rails.forEach(y => {
+    box(46, 3.4, 1.2, MAT.rail, 0, y, -8.8);
+    box(46, 0.7, 2.2, MAT.rail, 0, y + 1.9, -9.2);
+    box(46, 0.7, 2.2, MAT.rail, 0, y - 1.9, -9.2);
+  });
+
+  /* ------------------------------------------------------------- devices */
+  const DEVICES = [
+    { id: 'PLC-01', label: 'PLC-01', x: -16, y: 68, w: 17, h: 13, d: 7,  kind: 'plc' },
+    { id: 'SW-01',  label: 'SW-01',  x: 2,   y: 68, w: 11, h: 9.5, d: 6.5, kind: 'sw' },
+    { id: 'PSU-01', label: 'PSU-01', x: 15,  y: 68, w: 9,  h: 13, d: 7,  kind: 'psu' },
+    { id: 'QS-01',  label: 'MAIN',   x: -19, y: 54, w: 12, h: 17, d: 8,  kind: 'main' },
+    { id: 'RCD-01', label: 'RCD',    x: -4,  y: 54, w: 9,  h: 15, d: 7,  kind: 'rcd' }
+  ];
+  for (let i = 0; i < 6; i++) {
+    DEVICES.push({ id: 'MCB-0' + (i + 1), label: 'MCB-' + (i + 1), x: 5.5 + i * 3.6, y: 54, w: 3.2, h: 14, d: 6.5, kind: 'mcb' });
+  }
+
+  const deviceGroup = new THREE.Group(); cabinet.add(deviceGroup);
+  const ledMats = [];
+
+  DEVICES.forEach(dv => {
+    const g = new THREE.Group();
+    g.position.set(dv.x, dv.y, -8.0 + dv.d / 2);
+    deviceGroup.add(g);
+
+    const body = new THREE.Mesh(wireGeo, dv.kind === 'main' ? MAT.deviceDark : MAT.device);
+    body.scale.set(dv.w, dv.h, dv.d);
+    body.castShadow = true; body.receiveShadow = true;
+    g.add(body);
+
+    // front face plate
+    const face = new THREE.Mesh(wireGeo, dv.kind === 'main' ? MAT.deviceDark : MAT.device);
+    face.scale.set(dv.w - 0.6, dv.h - 0.8, 0.4);
+    face.position.set(0, 0, dv.d / 2 + 0.05);
+    g.add(face);
+
+    if (dv.kind === 'plc' || dv.kind === 'psu' || dv.kind === 'sw') {
+      for (let i = 0; i < 6; i++) {
+        const led = new THREE.Mesh(wireGeo, MAT.led.clone());
+        led.scale.set(0.7, 0.7, 0.3);
+        led.position.set(-dv.w / 2 + 1.6 + i * 2.0, dv.h / 2 - 2.2, dv.d / 2 + 0.35);
+        ledMats.push(led.material);
+        led.userData.phase = Math.random() * Math.PI * 2;
+        g.add(led);
+      }
+    }
+    if (dv.kind === 'main' || dv.kind === 'rcd') {
+      const lever = new THREE.Mesh(wireGeo, new THREE.MeshStandardMaterial({ color: 0xd23b4a, metalness: 0.4, roughness: 0.5 }));
+      lever.scale.set(dv.w * 0.42, 3.2, 1.6);
+      lever.position.set(0, -dv.h / 2 + 4.2, dv.d / 2 + 0.6);
+      g.add(lever);
+    }
+    if (dv.kind === 'mcb') {
+      const lever = new THREE.Mesh(wireGeo, new THREE.MeshStandardMaterial({ color: 0x33404b, metalness: 0.4, roughness: 0.5 }));
+      lever.scale.set(1.4, 2.6, 1.2);
+      lever.position.set(0, 1.4, dv.d / 2 + 0.5);
+      g.add(lever);
+    }
+
+    const name = makeLabel(dv.label, 8.5, '#cdefff', '#0a1a24');
+    name.position.set(0, dv.h / 2 + 1.6, dv.d / 2 + 0.6);
+    name.scale.multiplyScalar(0.62);
+    name.visible = false;
+    g.add(name);
+
+    g.userData = { kind: 'device', id: dv.id, label: dv.label, role: dv.kind, labelSprite: name };
+    S.devices.push(g);
+  });
+
+  /* junction boxes — real JB look: enclosure, hinged lid, door frame,
+     conduit knockouts and a terminal block visible through the lid */
+  [['JB-01', -13], ['JB-03', 12]].forEach(([id, x]) => {
+    const g = new THREE.Group();
+    g.position.set(x, 14.2, -9.2);
+    deviceGroup.add(g);
+
+    const shell = new THREE.MeshStandardMaterial({ color: 0xd7dde3, metalness: 0.3, roughness: 0.55 });
+    const trim = new THREE.MeshStandardMaterial({ color: 0xb9c3cc, metalness: 0.55, roughness: 0.38 });
+    const dark = new THREE.MeshStandardMaterial({ color: 0x2b3843, metalness: 0.5, roughness: 0.5 });
+
+    const b = new THREE.Mesh(wireGeo, shell);
+    b.scale.set(11, 5.4, 4.6); b.castShadow = true; b.receiveShadow = true;
+    g.add(b);
+
+    /* hinged lid */
+    const lid = new THREE.Mesh(wireGeo, trim);
+    lid.scale.set(11.4, 5.8, 0.8); lid.position.z = 2.2;
+    g.add(lid);
+
+    /* door frame (four thin bars) */
+    [[0, 2.82, 11.5, 0.28], [0, -2.82, 11.5, 0.28]].forEach(([dx, dy, w, h]) => {
+      const bar = new THREE.Mesh(wireGeo, trim);
+      bar.scale.set(w, h, 0.9); bar.position.set(dx, dy, 2.25);
+      g.add(bar);
+    });
+    [-5.6, 5.6].forEach(dx => {
+      const bar = new THREE.Mesh(wireGeo, trim);
+      bar.scale.set(0.28, 5.6, 0.9); bar.position.set(dx, 0, 2.25);
+      g.add(bar);
+    });
+
+    /* captive screws on the lid */
+    [[-4.2, 1.9], [4.2, 1.9], [-4.2, -1.9], [4.2, -1.9]].forEach(([dx, dy]) => {
+      const scr = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 0.5, 8), dark);
+      scr.rotation.x = Math.PI / 2; scr.position.set(dx, dy, 2.72);
+      g.add(scr);
+    });
+
+    /* conduit knockouts: 2 on top, 2 on the bottom, 1 each side */
+    [[-3.2, 3.1], [3.2, 3.1]].forEach(([dx, dy]) => {
+      const k = new THREE.Mesh(new THREE.CylinderGeometry(0.85, 0.85, 1.1, 12), trim);
+      k.position.set(dx, dy, 0); g.add(k);
+    });
+    [[-3.2, -3.1], [3.2, -3.1]].forEach(([dx, dy]) => {
+      const k = new THREE.Mesh(new THREE.CylinderGeometry(0.85, 0.85, 1.1, 12), trim);
+      k.position.set(dx, dy, 0); g.add(k);
+    });
+    [[-5.9], [5.9]].forEach(([dx]) => {
+      const k = new THREE.Mesh(new THREE.CylinderGeometry(0.85, 0.85, 1.1, 12), trim);
+      k.rotation.z = Math.PI / 2; k.position.set(dx, 0, 0); g.add(k);
+    });
+
+    /* terminal block inside, peeking through the lid line */
+    const tb = new THREE.Mesh(wireGeo, dark);
+    tb.scale.set(9.4, 1.3, 2.6); tb.position.set(0, -1.4, 0.6);
+    g.add(tb);
+    for (let i = 0; i < 6; i++) {
+      const t = new THREE.Mesh(wireGeo, new THREE.MeshStandardMaterial({ color: 0xc9d3da, metalness: 0.6, roughness: 0.35 }));
+      t.scale.set(0.5, 1.0, 1.2); t.position.set(-3.6 + i * 1.44, -1.4, 0.6);
+      g.add(t);
+    }
+
+    /* status LED */
+    const led = new THREE.Mesh(wireGeo, MAT.led.clone());
+    led.scale.set(0.7, 0.7, 0.3); led.position.set(4.6, 2.3, 2.7);
+    ledMats.push(led.material);
+    g.add(led);
+
+    const name = makeLabel(id, 7, '#0f2230', '#d8e4ec');
+    name.position.set(0, 4.4, 2.9); name.scale.multiplyScalar(0.6); name.visible = false;
+    g.add(name);
+    g.userData = { kind: 'device', id: id, label: id, role: 'jb', labelSprite: name };
+    S.devices.push(g);
+  });
+
+  /* ---------------------------------------------------- terminal strips */
+  // 4 terminal rows x 3 strips x 16 terminals = 192 landing slots
+  const TB_ROWS = [{ y: 44, strips: 3 }, { y: 36, strips: 3 }, { y: 28, strips: 3 }, { y: 20, strips: 3 }];
+  const TERM_PER_STRIP = 16;
+  const TERM_PITCH = 0.86;
+  let tbIndex = 0;
+  const terminalPicks = [];                 // instanced meshes used for raycasting
+  const _tmpColor = new THREE.Color();
+
+  function buildTerminals() {
+    const g = new THREE.Group(); cabinet.add(g);
+    let slot = 0;
+
+    /* one InstancedMesh for all terminal bodies and one for all colour markers:
+       384 individual meshes would cost 384 draw calls on a low-end GPU */
+    let total = 0;
+    TB_ROWS.forEach(row => { total += row.strips * TERM_PER_STRIP; });
+
+    const bodyGeo = new THREE.BoxGeometry(0.8, 4.0, 3.2);
+    const mkGeo = new THREE.BoxGeometry(0.66, 0.5, 2.2);
+    const bodyInst = new THREE.InstancedMesh(bodyGeo, MAT.terminal, total);
+    const mkInst = new THREE.InstancedMesh(mkGeo,
+      new THREE.MeshStandardMaterial({ color: 0x7d8b97, metalness: 0.3, roughness: 0.6 }), total);
+    bodyInst.castShadow = false; bodyInst.receiveShadow = false;
+    mkInst.castShadow = false; mkInst.receiveShadow = false;
+    bodyInst.instanceMatrix.setUsage(THREE.StaticDrawUsage);
+    mkInst.instanceMatrix.setUsage(THREE.StaticDrawUsage);
+
+    const dummy = new THREE.Object3D();
+    const mkBase = new THREE.Color(0x7d8b97);
+
+    TB_ROWS.forEach(row => {
+      const stripW = TERM_PER_STRIP * TERM_PITCH;
+      for (let s = 0; s < row.strips; s++) {
+        const cx = (s - (row.strips - 1) / 2) * (stripW + 2.6);
+        // rail body
+        box(stripW + 0.6, 3.2, 3.0, MAT.terminal, cx, row.y + 1.6, -8.4);
+        // end plates
+        box(0.4, 4.2, 3.4, MAT.deviceDark, cx - stripW / 2 - 0.3, row.y + 2.1, -8.4);
+        box(0.4, 4.2, 3.4, MAT.deviceDark, cx + stripW / 2 + 0.3, row.y + 2.1, -8.4);
+        // strip id label
+        const sid = 'TB-' + String(tbIndex + 1).padStart(2, '0');
+        const sl = makeLabel(sid, 6, '#9fe9ff', '#06202c');
+        sl.position.set(cx, row.y + 7.2, -7.2);
+        sl.visible = false;
+        sl.userData.isLabel = true;
+        g.add(sl);
+        for (let t = 0; t < TERM_PER_STRIP; t++) {
+          const tx = cx - stripW / 2 + TERM_PITCH / 2 + t * TERM_PITCH;
+          dummy.position.set(tx, row.y + 2.6, -8.4);
+          dummy.updateMatrix();
+          bodyInst.setMatrixAt(slot, dummy.matrix);
+          dummy.position.set(tx, row.y + 4.8, -8.4);
+          dummy.updateMatrix();
+          mkInst.setMatrixAt(slot, dummy.matrix);
+          mkInst.setColorAt(slot, mkBase);
+          const tmn = { index: slot, mesh: bodyInst, marker: mkInst, x: tx, y: row.y + 2.6, z: -8.4, cable: null, strip: sid };
+          S.terminals.push(tmn);
+          slot++;
+        }
+        tbIndex++;
+      }
+    });
+    bodyInst.instanceMatrix.needsUpdate = true;
+    mkInst.instanceMatrix.needsUpdate = true;
+    bodyInst.userData = { kind: 'terminal', instanced: true };
+    mkInst.userData = { kind: 'terminal', instanced: true };
+    bodyInst.frustumCulled = false;
+    mkInst.frustumCulled = false;
+    g.add(bodyInst); g.add(mkInst);
+    terminalPicks.push(bodyInst, mkInst);
+  }
+
+  function setMarkerColor(t, hex) {
+    t.marker.setColorAt(t.index, _tmpColor.setHex(hex));
+    t.marker.instanceColor.needsUpdate = true;
+  }
+  buildTerminals();
+
+  /* --------------------------------------------------------- cable glands */
+  const GLANDS = [];
+  for (let i = 0; i < 12; i++) {
+    const x = -22 + i * 4;
+    const z = 4.2;
+    const gld = new THREE.Mesh(new THREE.CylinderGeometry(1.0, 1.0, 2.2, 14), MAT.rail);
+    gld.position.set(x, 2.2, z);
+    gld.castShadow = true;
+    cabinet.add(gld);
+    const nut = new THREE.Mesh(new THREE.CylinderGeometry(1.35, 1.35, 0.8, 6), MAT.shellDark);
+    nut.position.set(x, 3.4, z);
+    cabinet.add(nut);
+    GLANDS.push({ x: x, y: 3.6, z: z });
+  }
+
+  /* -------------------------------------------------------------- labels */
+  function makeLabel(text, size, color, bg) {
+    const pad = 14;
+    const f = '700 30px "Cascadia Mono", Consolas, monospace';
+    const cv = document.createElement('canvas');
+    const ctx0 = cv.getContext('2d');
+    ctx0.font = f;
+    const w = Math.ceil(ctx0.measureText(text).width) + pad * 2;
+    cv.width = w; cv.height = 48;
+    const ctx = cv.getContext('2d');
+    ctx.font = f;
+    ctx.fillStyle = bg || '#08161f';
+    const r = 10;
+    ctx.beginPath();
+    ctx.moveTo(r, 0); ctx.lineTo(cv.width - r, 0); ctx.quadraticCurveTo(cv.width, 0, cv.width, r);
+    ctx.lineTo(cv.width, cv.height - r); ctx.quadraticCurveTo(cv.width, cv.height, cv.width - r, cv.height);
+    ctx.lineTo(r, cv.height); ctx.quadraticCurveTo(0, cv.height, 0, cv.height - r);
+    ctx.lineTo(0, r); ctx.quadraticCurveTo(0, 0, r, 0); ctx.fill();
+    ctx.fillStyle = color || '#cdefff';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, pad, cv.height / 2 + 1);
+
+    const tex = new THREE.CanvasTexture(cv);
+    tex.anisotropy = 4;
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false, depthWrite: false }));
+    const scale = (size || 8) / 48;
+    sp.scale.set(cv.width * scale * 0.1, 4.8 * scale * 10, 1);
+    sp.scale.set(cv.width / 48 * 4.2, 4.2, 1);
+    sp.center.set(0.5, 0.5);
+    sp.renderOrder = 20;
+    return sp;
+  }
+
+  /* host label above cabinet */
+  let hostLabel = makeLabel('CABINET', 10, '#9fe9ff', '#06202c');
+  hostLabel.position.set(0, 90, 0);
+  hostLabel.visible = true;
+  cabinet.add(hostLabel);
+
+  /* ------------------------------------------------------------- cables 3D */
+  const cableGroup = new THREE.Group();
+  cabinet.add(cableGroup);
+
+  const cableMats = new Map();
+  function matFor(color) {
+    if (!cableMats.has(color)) {
+      cableMats.set(color, new THREE.MeshStandardMaterial({
+        color: color, metalness: 0.15, roughness: 0.5, emissive: color, emissiveIntensity: 0.06
+      }));
+    }
+    return cableMats.get(color);
+  }
+
+  const selMat = new THREE.MeshStandardMaterial({
+    color: 0xffffff, emissive: 0x8ce8ff, emissiveIntensity: 1.4, metalness: 0.2, roughness: 0.3
+  });
+
+  function routePoints(gland, term, side) {
+    const ductX = side === 'left' ? -DUCT_X : DUCT_X;
+    const p = [];
+    p.push(new THREE.Vector3(gland.x, gland.y, gland.z));
+    p.push(new THREE.Vector3(gland.x, 11.5, gland.z));
+    p.push(new THREE.Vector3(gland.x, 11.5, -7.6));
+    p.push(new THREE.Vector3(ductX, 11.5, -7.6));
+    p.push(new THREE.Vector3(ductX, term.y + 3.2, -7.6));
+    p.push(new THREE.Vector3(term.x + (side === 'left' ? 1.4 : -1.4), term.y + 3.2, -7.6));
+    p.push(new THREE.Vector3(term.x, term.y + 3.2, -7.6));
+    p.push(new THREE.Vector3(term.x, term.y + 2.4, term.z + 0.4));
+    return p;
+  }
+
+  function clearCables() {
+    while (cableGroup.children.length) {
+      const m = cableGroup.children.pop();
+      if (m.geometry) m.geometry.dispose();
+      if (m.material && m.material !== selMat && m.material.isMeshStandardMaterial) m.material = null;
+      cableGroup.remove(m);
+    }
+    S.cables = [];
+    S.terminals.forEach(t => {
+      t.cable = null;
+      setMarkerColor(t, 0x7d8b97);
+    });
+  }
+
+  function buildCables() {
+    clearCables();
+    const scope = S.scope;
+    const maxSlots = S.terminals.length;
+    const n = Math.min(scope.length, maxSlots);
+
+    for (let i = 0; i < n; i++) {
+      const c = scope[i];
+      const term = S.terminals[i];
+      const gland = GLANDS[i % GLANDS.length];
+      const side = (S.routeMode === 'left') ? 'left'
+                 : (S.routeMode === 'right') ? 'right'
+                 : (term.x < 0 ? 'left' : 'right');
+
+      const pts = routePoints(gland, term, side);
+      const curve = new THREE.CatmullRomCurve3(pts, false, 'catmullrom', 0.12);
+      const geo = new THREE.TubeGeometry(curve, 52, 0.15, 5, false);
+      const color = cableColor(c);
+      const mesh = new THREE.Mesh(geo, matFor(color));
+      mesh.castShadow = false;
+      mesh.receiveShadow = false;
+      mesh.userData = { kind: 'cable', cable: c, index: i };
+      cableGroup.add(mesh);
+
+      setMarkerColor(term, color);
+      term.cable = c;
+
+      S.cables.push({ cable: c, mesh: mesh, curve: curve, term: term, color: color, side: side, gland: i % GLANDS.length });
+    }
+    setCableOpacity(1);
+    if ($('#nPins')) $('#nPins').textContent = S.cables.length;
+  }
+
+  /* pulsing tracer */
+  const tracer = new THREE.Mesh(
+    new THREE.SphereGeometry(0.62, 16, 12),
+    new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0x9ff0ff, emissiveIntensity: 2.4, metalness: 0, roughness: 0.2 })
+  );
+  tracer.visible = false;
+  cabinet.add(tracer);
+  const tracerLight = new THREE.PointLight(0x9ff0ff, 1.4, 26, 2);
+  tracer.add(tracerLight);
+
+  const ringGeo = new THREE.RingGeometry(1.1, 1.7, 26);
+  const ringMat = new THREE.MeshBasicMaterial({ color: 0x9ff0ff, transparent: true, opacity: 0.55, side: THREE.DoubleSide });
+  const ring = new THREE.Mesh(ringGeo, ringMat);
+  ring.visible = false;
+  scene.add(ring);
+
+  /* pin label on the selected cable landing */
+  let pinSprite = null, pinLine = null, tagSprites = [];
+
+  function clearPin() {
+    if (pinSprite) {
+      cabinet.remove(pinSprite);
+      if (pinSprite.material.map) pinSprite.material.map.dispose();
+      pinSprite.material.dispose();
+      pinSprite = null;
+    }
+    if (pinLine) { cabinet.remove(pinLine); pinLine.geometry.dispose(); pinLine = null; }
+  }
+
+  function showPin(cable, term) {
+    clearPin();
+    const col = cssColor(cableColor(cable));
+    pinSprite = makeLabel(cable.tag, 7, col, '#03141d');
+    pinSprite.position.set(term.x, term.y + 9, 4.2);
+    pinSprite.renderOrder = 30;
+    cabinet.add(pinSprite);
+    const g = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(term.x, term.y + 5.4, -7.9),
+      new THREE.Vector3(term.x, term.y + 8.6, 4.2)
+    ]);
+    pinLine = new THREE.Line(g, new THREE.LineBasicMaterial({ color: cableColor(cable), transparent: true, opacity: 0.9 }));
+    cabinet.add(pinLine);
+  }
+
+  function showAllTags(on) {
+    tagSprites.forEach(s => {
+      cabinet.remove(s);
+      if (s.material.map) s.material.map.dispose();
+      s.material.dispose();
+    });
+    tagSprites = [];
+    if (!on) return;
+    S.cables.forEach(o => {
+      const s = makeLabel(o.cable.tag, 5, '#bfe9ff', '#04141d');
+      s.position.set(o.term.x, o.term.y + 6.2, -2.6);
+      s.renderOrder = 25;
+      cabinet.add(s);
+      tagSprites.push(s);
+    });
+  }
+
+  /* ------------------------------------------- external field nodes (other end) */
+  const fieldGroup = new THREE.Group();
+  scene.add(fieldGroup);
+
+  function externalEnd(cable) {
+    const isTo = N(cable.toTag) === N(S.host);
+    const isFrom = N(cable.fromTag) === N(S.host);
+    if (isTo && !isFrom) return { tag: cable.fromTag, desc: cable.fromDesc, loc: cable.fromLoc, dir: 'FROM' };
+    if (isFrom && !isTo) return { tag: cable.toTag, desc: cable.toDesc, loc: cable.toLoc, dir: 'TO' };
+    return null;
+  }
+
+  /* where a device really sits, taken from the model.
+     When both the cabinet and the device exist in the NWD their true
+     separation (metres) is used — compressed only by SITE_SCALE so a 300 m
+     run still fits on screen. Devices that are not in the model keep a
+     stable ring position and are flagged in the UI. */
+  const SITE_SCALE = 40;                 // 1 view unit = 0.4 m
+  function realSpot(tag) {
+    const me = geoOf(tag), host = geoOf(S.host);
+    if (!me || !host) return null;
+    /* NWD: X east, Y north, Z up.  app: X east, Y up, Z south  */
+    const dx = (me.c[0] - host.c[0]) / SITE_SCALE;
+    const dz = (me.c[2] - host.c[2]) / SITE_SCALE;
+    const dy = (me.c[1] - host.c[1]) / SITE_SCALE;
+    const dist = Math.hypot(dx, dz);
+    const maxR = 240;
+    const k = dist > maxR ? maxR / dist : 1;
+    return { x: dx * k, z: dz * k, dy: dy, real: true };
+  }
+
+  function nodeSpot(tag) {
+    const real = realSpot(tag);
+    if (real) return real;
+    let h = 2166136261;
+    for (let i = 0; i < tag.length; i++) { h ^= tag.charCodeAt(i); h = Math.imul(h, 16777619); }
+    const a = (((h >>> 0) % 2400) / 2400) * 2.3 - 1.15;
+    const r = 70 + ((h >>> 9) % 26);
+    return { x: Math.sin(a) * r, z: Math.cos(a) * r + 10 };
+  }
+
+  function disposeGroup(g) {
+    g.traverse(o => {
+      if (o.geometry) o.geometry.dispose();
+      if (o.material) {
+        if (o.material.map) o.material.map.dispose();
+        o.material.dispose();
+      }
+    });
+  }
+
+  function clearField() {
+    while (fieldGroup.children.length) {
+      const c = fieldGroup.children.pop();
+      disposeGroup(c);
+      fieldGroup.remove(c);
+    }
+  }
+
+  const KIND_COLOR = {
+    INSTRUMENT: 0xb07cf0, VALVE: 0x35c98a, JUNCTION: 0x67d3c3, MOTOR: 0xf5c451,
+    TRANSFORMER: 0xe05252, GENERATOR: 0xff9d4d, PANEL: 0x4f8ff7, LIGHT: 0xffd479,
+    HVAC: 0x67d3c3, POWER: 0xe05252, DEVICE: 0x7f9bb0, SKID: 0xff8a5c,
+    SPEAKER: 0x6fa8ff, CAMERA: 0x8a7dff, BEACON: 0xffb347, READER: 0x4fd6a8,
+    CONTACT: 0x9be36b, SOCKET: 0x62c9ff, WAP: 0x59e0d0, PHONE: 0xff7d9c,
+    PUMP: 0x4fc3ff, DETECTOR: 0xffe066
+  };
+
+  /* Every equipment family that actually appears in the cable schedule gets its
+     own kind, so it also gets its own real 3D model (js/devices.js). */
+  function deviceKind(desc, tag) {
+    const s = ((desc || '') + ' ' + (tag || '')).toUpperCase();
+    /* "Battery Charger - JB" is a charger panel with its own JB, not a plain JB —
+       classify it as POWER so it gets the charger/battery glyph */
+    if (/BATTERY CHARGER|BATTERY|CHARGER|RECTIFIER|\bUPS\b|POWER SUPPLY/.test(s)) return 'POWER';
+    if (/JUNCTION BOX|JUNCTION|\bJB\b/.test(s)) return 'JUNCTION';
+    if (/TRANSFORMER/.test(s)) return 'TRANSFORMER';
+    if (/GENERATOR|TURBINE|ALTERNATOR/.test(s)) return 'GENERATOR';
+    if (/SKID|PACKAGE SYSTEM|PACKAGE\b|MODULE\b/.test(s)) return 'SKID';
+    if (/LOUDSPEAKER|SPEAKER|SOUNDER|SIREN|\bHORN\b/.test(s)) return 'SPEAKER';
+    if (/BEACON|STROBE|FLASHING LIGHT/.test(s)) return 'BEACON';
+    if (/CCTV|CAMERA/.test(s)) return 'CAMERA';
+    if (/BADGE|CARD READER|BIOMETRIC/.test(s)) return 'READER';
+    if (/DOOR CONTACT|GATE CONTACT|DOORLOCK|MAGNETIC DOOR|BREAK GLASS|PUSHBUTTON|PUSH BUTTON|GATE POSITION/.test(s)) return 'CONTACT';
+    if (/WIRELESS ACCESS|\bWAP\b|\bWLAN\b|ANTENNA/.test(s)) return 'WAP';
+    if (/SOCKET|RJ45|DATA OUTLET|TV OUTLET/.test(s)) return 'SOCKET';
+    if (/TELEPHONE|INTERCOM|\bPHONE\b|HANDSET/.test(s)) return 'PHONE';
+    if (/SWITCHBOARD|SWITCHGEAR|SWGR|MOTOR CONTROL|MCC\b|PANEL|BOARD|CABINET|\bDB\b|RACK/.test(s)) return 'PANEL';
+    if (/DETECTOR|GAS DETECT|HYDROCARBON DETECT|SMOKE DETECT|HEAT DETECT/.test(s)) return 'DETECTOR';
+    if (/VALVE|DAMPER|ACTUATOR/.test(s)) return 'VALVE';
+    if (/MOTOR/.test(s)) return 'MOTOR';
+    if (/PUMP/.test(s)) return 'PUMP';
+    if (/TRANSMITTER|SENSOR|GAUGE|\bMETER\b|ANALYS|DETECT|THERMOCOUPLE|\bRTD\b|VIBRATION|LIMIT SWITCH|FLOW|LEVEL|PRESSURE|TEMPERATURE|INSTRUMENT/.test(s)) return 'INSTRUMENT';
+    if (/MOTOR|\bDRIVE\b|VFD|\bFAN\b|COMPRESSOR/.test(s)) return 'MOTOR';
+    if (/LUMINAIRE|\bLAMP\b|LIGHT|FLOOD|BOLLARD/.test(s)) return 'LIGHT';
+    if (/AIR CONDITIONING|\bAHU\b|\bFCU\b|CHILLER|HVAC/.test(s)) return 'HVAC';
+    return 'DEVICE';
+  }
+
+  /* footprint per equipment type — the site view uses this to look like real kit */
+  const KIND_SHAPE = {
+    TRANSFORMER: { sx: 20, sy: 13, sz: 9, y: 7.5 },
+    GENERATOR:   { sx: 23, sy: 10, sz: 9, y: 6.5 },
+    MOTOR:       { sx: 16, sy: 9, sz: 8, y: 6 },
+    VALVE:       { sx: 11, sy: 10, sz: 7, y: 6 },
+    INSTRUMENT:  { sx: 9, sy: 11, sz: 6, y: 6.5 },
+    JUNCTION:    { sx: 13, sy: 9, sz: 8, y: 6 },
+    PANEL:       { sx: 18, sy: 12, sz: 7, y: 7 },
+    POWER:       { sx: 16, sy: 11, sz: 8, y: 6.5 },
+    LIGHT:       { sx: 6, sy: 6, sz: 6, y: 4 },
+    HVAC:        { sx: 16, sy: 10, sz: 9, y: 6 },
+    DEVICE:      { sx: 14, sy: 9, sz: 7, y: 6 },
+    SKID:        { sx: 30, sy: 15, sz: 18, y: 8 },
+    SPEAKER:     { sx: 9, sy: 7, sz: 9, y: 7 },
+    CAMERA:      { sx: 8, sy: 7, sz: 8, y: 7.5 },
+    BEACON:      { sx: 7, sy: 7, sz: 6, y: 6.5 },
+    READER:      { sx: 5, sy: 7, sz: 4, y: 6.5 },
+    CONTACT:     { sx: 6, sy: 5, sz: 4, y: 6 },
+    SOCKET:      { sx: 5, sy: 5, sz: 4, y: 6 },
+    WAP:         { sx: 7, sy: 6, sz: 7, y: 7 },
+    PHONE:       { sx: 7, sy: 8, sz: 5, y: 6.5 },
+    PUMP:        { sx: 22, sy: 11, sz: 11, y: 6.5 },
+    DETECTOR:    { sx: 5, sy: 9, sz: 5, y: 6 }
+  };
+
+  function makeFieldNode(end, cable, gland, simple, pos) {
+    const a = assetOf(end.tag);
+    const state = modelState(a);
+    const bad = state === MS.NONE;        // only a true REM gets the red treatment
+    const ref = state === MS.REF;
+    const kind = deviceKind(a.desc || end.desc, end.tag);
+    const tint = bad ? 0xff4d67 : KIND_COLOR[kind];
+    const g = new THREE.Group();
+    const spot = pos || nodeSpot(end.tag);
+    g.position.set(spot.x, 0, spot.z);
+
+    /* footprint depends on the equipment type so the site view reads
+       transformers / generators / valves / sensors apart at a glance */
+    const shape = KIND_SHAPE[kind] || KIND_SHAPE.DEVICE;
+    const topY = shape.y + shape.sy / 2;
+
+    /* base (skipped in the dense site view to save draw calls) */
+    if (!simple) {
+      const base = new THREE.Mesh(wireGeo, new THREE.MeshStandardMaterial({ color: 0x18242e, metalness: 0.4, roughness: 0.7 }));
+      base.scale.set(shape.sx * 1.18, 1.6, shape.sz * 1.3); base.position.y = 0.8; base.receiveShadow = true;
+      g.add(base);
+    }
+
+    /* device body */
+    const bodyMat = new THREE.MeshStandardMaterial({
+      color: bad ? 0x371b23 : new THREE.Color(0x16222c).lerp(new THREE.Color(tint), simple ? 0.42 : 0.06),
+      metalness: 0.55, roughness: 0.42,
+      emissive: tint, emissiveIntensity: bad ? 0.35 : (ref ? (simple ? 0.3 : 0.16) : (simple ? 0.22 : 0.12))
+    });
+    const body = new THREE.Mesh(wireGeo, bodyMat);
+    body.scale.set(shape.sx, shape.sy, shape.sz); body.position.y = shape.y;
+    body.castShadow = !simple;
+    /* a real assembled model exists for this family (js/devices.js) */
+    const builder = !simple && window.CAB3D_DEVICES && window.CAB3D_DEVICES[kind];
+    if (!builder) g.add(body);
+
+    if (simple) {
+      g.userData = { kind: 'field', tag: end.tag, kindName: kind, cable: cable, rem: bad, ref: ref };
+      const cColS = cableColor(cable);
+      const lxS = gland.x - spot.x, lzS = 4.2 - spot.z;
+      const curveS = new THREE.CatmullRomCurve3([
+        new THREE.Vector3(0, 3.2, -3.6),
+        new THREE.Vector3(0, 1.9, -7),
+        new THREE.Vector3(lxS * 0.45, 1.9, lzS * 0.55),
+        new THREE.Vector3(lxS, 1.9, lzS + 10),
+        new THREE.Vector3(lxS, 2.6, lzS + 2),
+        new THREE.Vector3(lxS, gland.y - 0.4, lzS)
+      ], false, 'catmullrom', 0.12);
+      g.add(new THREE.Mesh(
+        new THREE.TubeGeometry(curveS, 40, 0.2, 5, false),
+        new THREE.MeshStandardMaterial({
+          color: cColS, metalness: 0.2, roughness: 0.55, emissive: cColS, emissiveIntensity: 0.25,
+          transparent: true, opacity: 0.8
+        })
+      ));
+      const lbl = makeLabel(end.tag, 8.5, bad ? '#ffb3c0' : ref ? '#b8f0e8' : '#cdefff', '#04141d');
+      lbl.position.set(0, topY + 8.5, 0);
+      g.add(lbl);
+      fieldGroup.add(g);
+      return g;
+    }
+
+    /* real assembled 3D model for this equipment family */
+    if (builder) {
+      builder({
+        g: g, shape: shape, tint: tint, ref: ref, bad: bad,
+        desc: a.desc || end.desc || '', tag: end.tag, cable: cable
+      });
+    } else {
+
+    const edge = new THREE.LineSegments(
+      new THREE.EdgesGeometry(wireGeo),
+      new THREE.LineBasicMaterial({ color: bad ? tint : (ref ? 0x67d3c3 : tint), transparent: true, opacity: bad ? 0.85 : (ref ? 0.7 : 0.5) })
+    );
+    edge.scale.copy(body.scale); edge.position.copy(body.position);
+    g.add(edge);
+
+    /* kind glyph on the front / top face */
+    const steel = () => new THREE.MeshStandardMaterial({ color: 0x8fa6b6, metalness: 0.85, roughness: 0.3 });
+
+    if (kind === 'INSTRUMENT') {
+      const dial = new THREE.Mesh(new THREE.CylinderGeometry(3.4, 3.4, 0.9, 18), new THREE.MeshStandardMaterial({ color: 0xe8f6ff, emissive: tint, emissiveIntensity: 0.5, metalness: 0.1, roughness: 0.4 }));
+      dial.rotation.x = Math.PI / 2; dial.position.set(0, shape.y + 0.6, shape.sz / 2 + 0.2);
+      g.add(dial);
+      const needle = new THREE.Mesh(wireGeo, new THREE.MeshStandardMaterial({ color: 0x0a1a22, emissive: 0x0a1a22 }));
+      needle.scale.set(0.35, 2.4, 0.4); needle.position.set(0, shape.y + 1.2, shape.sz / 2 + 0.6); needle.rotation.z = -0.6;
+      g.add(needle);
+      /* small impulse line stub on top */
+      const stub = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 2.4, 10), steel());
+      stub.position.set(0, topY + 1.1, 0);
+      g.add(stub);
+    } else if (kind === 'TRANSFORMER') {
+      /* three HV bushings + radiator fins — the classic transformer silhouette */
+      for (let k = 0; k < 3; k++) {
+        const b = new THREE.Mesh(new THREE.CylinderGeometry(0.62, 0.9, 3.6, 10), steel());
+        b.position.set(-4.6 + k * 4.6, topY + 1.8, 0);
+        g.add(b);
+        const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.95, 0.95, 0.9, 10), new THREE.MeshStandardMaterial({ color: 0xe8f6ff, emissive: tint, emissiveIntensity: 0.55, metalness: 0.3, roughness: 0.4 }));
+        cap.position.set(-4.6 + k * 4.6, topY + 3.9, 0);
+        g.add(cap);
+      }
+      for (let k = 0; k < 4; k++) {
+        const fin = new THREE.Mesh(wireGeo, new THREE.MeshStandardMaterial({ color: 0x2a3a46, metalness: 0.7, roughness: 0.45 }));
+        fin.scale.set(0.7, shape.sy * 0.72, shape.sz * 0.92);
+        fin.position.set(-shape.sx / 2 - 0.5 + k * 0.75, shape.y, 0);
+        g.add(fin);
+      }
+    } else if (kind === 'GENERATOR') {
+      /* horizontal alternator barrel with an end fan and a skid base */
+      const barrel = new THREE.Mesh(new THREE.CylinderGeometry(3.1, 3.1, shape.sx * 0.62, 18), steel());
+      barrel.rotation.z = Math.PI / 2; barrel.position.set(0, shape.y + 1.2, 0);
+      g.add(barrel);
+      const fan = new THREE.Mesh(new THREE.CylinderGeometry(2.5, 2.5, 1.1, 16), new THREE.MeshStandardMaterial({ color: 0x1a2630, metalness: 0.7, roughness: 0.4, emissive: tint, emissiveIntensity: 0.35 }));
+      fan.rotation.z = Math.PI / 2; fan.position.set(shape.sx * 0.36, shape.y + 1.2, 0);
+      g.add(fan);
+      const exh = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.8, 3.2, 12), steel());
+      exh.position.set(-shape.sx * 0.28, topY + 1.6, 0);
+      g.add(exh);
+    } else if (kind === 'MOTOR') {
+      const shaft = new THREE.Mesh(new THREE.CylinderGeometry(2.2, 2.2, 4.5, 14), steel());
+      shaft.position.set(0, topY + 1.6, 0);
+      g.add(shaft);
+      const coupl = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.2, 1.6, 12), new THREE.MeshStandardMaterial({ color: 0x1a2630, metalness: 0.8, roughness: 0.3, emissive: tint, emissiveIntensity: 0.5 }));
+      coupl.position.set(0, topY + 4.4, 0);
+      g.add(coupl);
+    } else if (kind === 'VALVE') {
+      const wheel = new THREE.Mesh(new THREE.TorusGeometry(3, 0.7, 8, 18), new THREE.MeshStandardMaterial({ color: tint, metalness: 0.6, roughness: 0.35 }));
+      wheel.rotation.x = Math.PI / 2; wheel.position.set(0, topY + 1.4, 0);
+      g.add(wheel);
+      const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.45, 2.4, 10), steel());
+      stem.position.set(0, topY + 0.4, 0);
+      g.add(stem);
+      /* body flange */
+      const flange = new THREE.Mesh(new THREE.CylinderGeometry(3.4, 3.4, 0.8, 16), new THREE.MeshStandardMaterial({ color: 0x2a3a46, metalness: 0.75, roughness: 0.4 }));
+      flange.position.set(0, shape.y + 0.4, 0);
+      g.add(flange);
+    } else if (kind === 'LIGHT') {
+      const bulb = new THREE.Mesh(new THREE.SphereGeometry(2.2, 14, 10), new THREE.MeshStandardMaterial({ color: 0xfff3c4, emissive: 0xffd479, emissiveIntensity: 1.4 }));
+      bulb.position.set(0, topY + 1.8, 0);
+      g.add(bulb);
+    } else if (kind === 'JUNCTION') {
+      /* junction box: hinged lid, two conduit stubs, status LED */
+      const lid = new THREE.Mesh(wireGeo, new THREE.MeshStandardMaterial({ color: 0x22303c, metalness: 0.6, roughness: 0.4, emissive: tint, emissiveIntensity: 0.18 }));
+      lid.scale.set(shape.sx + 0.7, 0.7, shape.sz + 0.7); lid.position.set(0, topY + 0.2, 0);
+      g.add(lid);
+      const hinge = new THREE.Mesh(wireGeo, steel());
+      hinge.scale.set(shape.sx * 0.5, 0.35, 0.7); hinge.position.set(0, topY + 0.55, -shape.sz / 2);
+      g.add(hinge);
+      for (let k = 0; k < 2; k++) {
+        const stub = new THREE.Mesh(new THREE.CylinderGeometry(1.05, 1.05, 3.4, 12), steel());
+        stub.position.set(k * 6 - 3, topY + 1.9, 0);
+        g.add(stub);
+      }
+      const led = new THREE.Mesh(wireGeo, new THREE.MeshStandardMaterial({ color: 0x0a1a22, emissive: tint, emissiveIntensity: 2 }));
+      led.scale.set(1.4, 1.4, 0.5); led.position.set(0, shape.y, shape.sz / 2 + 0.3);
+      g.add(led);
+    } else if (kind === 'POWER') {
+      /* battery charger panel with its battery rack and the little JB it feeds
+         (e.g. "Compressed air Instru. skid Battery Charger - JB") */
+      const door = new THREE.Mesh(wireGeo, new THREE.MeshStandardMaterial({ color: 0x22303c, metalness: 0.6, roughness: 0.38, emissive: tint, emissiveIntensity: 0.16 }));
+      door.scale.set(shape.sx * 0.66, shape.sy * 0.82, 0.5);
+      door.position.set(-shape.sx * 0.12, shape.y, shape.sz / 2 + 0.25);
+      g.add(door);
+      for (let k = 0; k < 4; k++) {                     // louvre vents
+        const v = new THREE.Mesh(wireGeo, new THREE.MeshStandardMaterial({ color: 0x0b141b, metalness: 0.5, roughness: 0.6 }));
+        v.scale.set(shape.sx * 0.5, 0.35, 0.35);
+        v.position.set(-shape.sx * 0.12, shape.y - 2 + k * 1.2, shape.sz / 2 + 0.55);
+        g.add(v);
+      }
+      const led = new THREE.Mesh(wireGeo, new THREE.MeshStandardMaterial({ color: 0x0a1a22, emissive: 0x54ffc0, emissiveIntensity: 2 }));
+      led.scale.set(1.3, 1.3, 0.5);
+      led.position.set(shape.sx * 0.42, shape.y + 2.6, shape.sz / 2 + 0.3);
+      g.add(led);
+      /* battery rack on top: two blocks with terminal posts */
+      for (let k = 0; k < 2; k++) {
+        const cell = new THREE.Mesh(wireGeo, new THREE.MeshStandardMaterial({ color: 0x1a2630, metalness: 0.35, roughness: 0.7, emissive: tint, emissiveIntensity: 0.18 }));
+        cell.scale.set(shape.sx * 0.34, 2.8, shape.sz * 0.62);
+        cell.position.set(-shape.sx * 0.2 + k * shape.sx * 0.42, topY + 1.4, 0);
+        g.add(cell);
+        for (let j = 0; j < 2; j++) {
+          const post = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 0.9, 8), steel());
+          post.position.set(cell.position.x - 1.6 + j * 3.2, topY + 3.2, 0);
+          g.add(post);
+        }
+      }
+      /* the JB annex on the right-hand flank + its conduit */
+      const jb = new THREE.Mesh(wireGeo, new THREE.MeshStandardMaterial({ color: 0x24323e, metalness: 0.55, roughness: 0.45, emissive: 0x67d3c3, emissiveIntensity: 0.22 }));
+      jb.scale.set(shape.sx * 0.3, shape.sy * 0.44, shape.sz * 0.72);
+      jb.position.set(shape.sx * 0.62, shape.y - 1.4, 0);
+      g.add(jb);
+      const jbLid = new THREE.Mesh(wireGeo, steel());
+      jbLid.scale.set(shape.sx * 0.32, 0.4, shape.sz * 0.74);
+      jbLid.position.set(shape.sx * 0.62, shape.y + 1.3, 0);
+      g.add(jbLid);
+      const cond = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.55, 3.4, 10), steel());
+      cond.position.set(shape.sx * 0.62, topY + 1.2, -shape.sz * 0.2);
+      g.add(cond);
+    } else if (kind === 'PANEL') {
+      for (let k = 0; k < 3; k++) {
+        const led = new THREE.Mesh(wireGeo, new THREE.MeshStandardMaterial({ color: 0x0a1a22, emissive: k === 0 ? 0x54ffc0 : 0x7fdcff, emissiveIntensity: 2 }));
+        led.scale.set(1.5, 1.5, 0.5); led.position.set(-5 + k * 5, shape.y + 3, shape.sz / 2 + 0.3);
+        g.add(led);
+      }
+    } else {
+      const led = new THREE.Mesh(wireGeo, new THREE.MeshStandardMaterial({ color: 0x0a1a22, emissive: tint, emissiveIntensity: 2 }));
+      led.scale.set(1.6, 1.6, 0.5); led.position.set(0, shape.y + 2, shape.sz / 2 + 0.3);
+      g.add(led);
+    }
+    }   /* end of the fallback glyph (builder used instead) */
+
+    /* labels */
+    const tagLbl = makeLabel(end.tag, 6.5, bad ? '#ffb3c0' : ref ? '#b8f0e8' : '#d7f2ff', '#04141d');
+    tagLbl.position.set(0, topY + 13.4, 0);
+    g.add(tagLbl);
+
+    const kLbl = makeLabel(kind + (bad ? '  ·  REM' : ref ? '  ·  MODEL TAG' : '  ·  IN MODEL'), 4.2, bad ? '#ff9db0' : ref ? '#8fe6db' : '#8fb6ca', '#04141d');
+    kLbl.position.set(0, topY + 5.2, 0);
+    g.add(kLbl);
+
+    const dLbl = makeLabel((end.dir === 'FROM'
+      ? 'FROM ' + end.tag + ' → ' + S.host
+      : S.host + ' → TO ' + end.tag).slice(0, 60), 4.2, '#9db8c8', '#04141d');
+    dLbl.position.set(0, topY + 1.6, 0);
+    g.add(dLbl);
+    const oLbl = makeLabel((a.desc || end.desc || '').slice(0, 46), 3.8, '#7f9bb0', '#04141d');
+    oLbl.position.set(0, topY + 9.4, 0);
+    oLbl.scale.multiplyScalar(0.72);
+    g.add(oLbl);
+
+    /* cable from the device into the gland (node-local coordinates) */
+    const cCol = cableColor(cable);
+    const lx = gland.x - spot.x;
+    const lz = 4.2 - spot.z;
+    const pts = [
+      new THREE.Vector3(0, 3.2, -3.6),
+      new THREE.Vector3(0, 1.9, -7),
+      new THREE.Vector3(lx * 0.45, 1.9, lz * 0.55),
+      new THREE.Vector3(lx, 1.9, lz + 10),
+      new THREE.Vector3(lx, 2.6, lz + 2),
+      new THREE.Vector3(lx, gland.y - 0.4, lz)
+    ];
+    const curve = new THREE.CatmullRomCurve3(pts, false, 'catmullrom', 0.12);
+    const tube = new THREE.Mesh(
+      new THREE.TubeGeometry(curve, 110, 0.3, 6, false),
+      new THREE.MeshStandardMaterial({ color: cCol, metalness: 0.25, roughness: 0.42, emissive: cCol, emissiveIntensity: 0.4 })
+    );
+    g.add(tube);
+
+    /* dashed ground trace to the cabinet */
+    const flat = new THREE.Line(
+      new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(0, 0.15, 5),
+        new THREE.Vector3(lx, 0.15, lz + 9)
+      ]),
+      new THREE.LineDashedMaterial({ color: bad ? 0xff7186 : 0x5cc7f2, dashSize: 3, gapSize: 2.4, transparent: true, opacity: 0.5 })
+    );
+    flat.computeLineDistances();
+    g.add(flat);
+
+    g.userData = { kind: 'field', tag: end.tag, kindName: kind, cable: cable, rem: bad, ref: ref };
+    fieldGroup.add(g);
+    return g;
+  }
+
+  function buildField(cable) {
+    clearField();
+    if (!cable) return;
+    const end = externalEnd(cable);
+    if (!end) return;
+    const obj = S.cables.find(o => o.cable === cable);
+    const gland = GLANDS[obj ? obj.gland : 0];
+    makeFieldNode(end, cable, gland);
+  }
+
+  function fieldDevices() {
+    const map = new Map();
+    S.cables.forEach(o => {
+      const end = externalEnd(o.cable);
+      if (!end) return;
+      const rec = map.get(end.tag);
+      if (rec) { rec.count++; return; }
+      map.set(end.tag, { tag: end.tag, desc: end.desc, loc: end.loc, dir: end.dir, cable: o.cable, gland: o.gland, count: 1 });
+    });
+    const order = {};
+    KIND_ORDER.forEach((k, i) => { order[k] = i; });
+    return [...map.values()].sort((a, b) =>
+      (order[deviceKind(assetOf(a.tag).desc || a.desc, a.tag)] - order[deviceKind(assetOf(b.tag).desc || b.desc, b.tag)]) ||
+      (b.count - a.count));
+  }
+
+  function zoneKey(s) {
+    return String(s || '').toLowerCase().replace(/\s+/g, ' ').trim() || '(area not listed)';
+  }
+
+  /* colour key for the equipment types actually present on this cabinet */
+  function updateKindLegend() {
+    const el = $('#kindLegend');
+    if (!el) return;
+    if (S.fieldMode === 'off') { el.classList.remove('on'); return; }
+    const seen = new Map();
+    S.cables.forEach(o => {
+      const end = externalEnd(o.cable);
+      if (!end) return;
+      const a = assetOf(end.tag);
+      const k = deviceKind(a.desc || end.desc, end.tag);
+      if (!seen.has(k)) seen.set(k, { tags: new Set(), rem: 0, ref: 0 });
+      const rec = seen.get(k);
+      if (!rec.tags.has(end.tag)) {
+        rec.tags.add(end.tag);
+        if (modelState(a) === MS.NONE) rec.rem++;
+        else if (modelState(a) === MS.REF) rec.ref++;
+      }
+    });
+    const order = ['TRANSFORMER', 'GENERATOR', 'MOTOR', 'VALVE', 'INSTRUMENT', 'JUNCTION', 'PANEL', 'POWER', 'LIGHT', 'HVAC', 'DEVICE'];
+    el.innerHTML = order.filter(k => seen.has(k)).map(k => {
+      const rec = seen.get(k);
+      const hex = '#' + KIND_COLOR[k].toString(16).padStart(6, '0');
+      return `<div class="lg"><i style="background:${hex}"></i>${KIND_LABEL[k] || k} ${rec.tags.size}${rec.ref ? ' · ref ' + rec.ref : ''}${rec.rem ? ' · REM ' + rec.rem : ''}</div>`;
+    }).join('');
+    el.classList.add('on');
+  }
+
+  /* site view: devices are laid out in their real schedule areas (skid /
+     plant zones), not a blind grid, so the scene reads like the site plan */
+  function buildFieldAll() {
+    clearField();
+    const devs = fieldDevices();
+    if (!devs.length) return;
+
+    const groups = new Map();
+    devs.forEach(d => {
+      const k = zoneKey(d.loc);
+      if (!groups.has(k)) {
+        groups.set(k, { key: k, name: (d.loc || '').trim() || 'Area not listed', items: [] });
+      }
+      groups.get(k).items.push(d);
+    });
+    const zones = [...groups.values()].sort((a, b) => b.items.length - a.items.length);
+
+    const sp = 24, gapX = 26, gapZ = 28;
+
+    /* pack the zones into a compact plant footprint (roughly square) */
+    zones.forEach(z => {
+      const n = z.items.length;
+      z.cols = Math.max(1, Math.min(n, Math.ceil(Math.sqrt(n * 1.5))));
+      z.rows = Math.ceil(n / z.cols);
+      z.w = z.cols * sp;
+      z.d = z.rows * sp * 0.85;
+    });
+    const area = zones.reduce((s, z) => s + (z.w + gapX) * (z.d + gapZ), 0);
+    const maxW = Math.max(300, Math.sqrt(area * 1.5));
+
+    let cx = 0, cz = 54, rowDepth = 0;
+    zones.forEach(z => {
+      if (cx > 0 && cx + z.w > maxW) { cx = 0; cz += rowDepth + gapZ; rowDepth = 0; }
+      z.px = cx; z.pz = cz;
+      cx += z.w + gapX;
+      rowDepth = Math.max(rowDepth, z.d);
+    });
+
+    /* centre the whole plant block on the cabinet */
+    const maxX = Math.max(...zones.map(z => z.px + z.w));
+    const shift = maxX / 2;
+
+    const padMat = new THREE.MeshStandardMaterial({ color: 0x0d1a22, metalness: 0.1, roughness: 0.95, transparent: true, opacity: 0.55 });
+    const padGeo = new THREE.PlaneGeometry(1, 1);
+
+    zones.forEach(z => {
+      const left = z.px - shift;
+      const midX = left + z.w / 2;
+
+      if (z.items.length > 1) {
+        const pad = new THREE.Mesh(padGeo, padMat);
+        pad.rotation.x = -Math.PI / 2;
+        pad.scale.set(z.w + 12, z.d + 14, 1);
+        pad.position.set(midX, 0.03, z.pz + z.d / 2 - 6);
+        fieldGroup.add(pad);
+      }
+
+      const kinds = {};
+      z.items.forEach(d => { const k = deviceKind(assetOf(d.tag).desc || d.desc, d.tag); kinds[k] = (kinds[k] || 0) + 1; });
+      const mainKind = Object.entries(kinds).sort((a, b) => b[1] - a[1])[0][0];
+      const zl = makeLabel(z.name.toUpperCase().slice(0, 42) + '  ·  ' + z.items.length + ' dev · ' + (KIND_LABEL[mainKind] || mainKind), 13, '#a9dcf5', '#07161f');
+      zl.position.set(midX, 30, z.pz - 8);
+      fieldGroup.add(zl);
+
+      z.items.forEach((d, i) => {
+        const col = i % z.cols, row = Math.floor(i / z.cols);
+        const pos = {
+          x: left + col * sp + sp / 2,
+          z: z.pz + row * sp * 0.85
+        };
+        makeFieldNode({ tag: d.tag, desc: d.desc, loc: d.loc, dir: d.dir }, d.cable, GLANDS[d.gland], true, pos);
+      });
+    });
+  }
+
+  function refreshField() {
+    updateKindLegend();
+    if (S.fieldMode === 'off') { clearField(); scene.fog = FOG; return; }
+    if (S.fieldMode === 'all') {
+      buildFieldAll();
+      scene.fog = null;            // the site view spans far beyond the cabinet fog range
+      return;
+    }
+    if (S.selCable) buildField(S.selCable); else clearField();
+    scene.fog = FOG;
+  }
+
+  /* ------------------------------------------------------------- selection */
+  let pulseT = 0;
+
+  function setCableOpacity(op) {
+    S.cables.forEach(o => {
+      const m = o.mesh.material;
+      if (m === selMat) return;
+      m.transparent = op < 1;
+      m.opacity = op;
+      m.emissiveIntensity = o.cable.__rem ? 0.35 : 0.06;
+      m.depthWrite = op > 0.9;
+    });
+  }
+
+  function clearSelection3D() {
+    S.cables.forEach(o => { o.mesh.material = matFor(o.color); });
+    tracer.visible = false; ring.visible = false;
+    clearPin();
+    setCableOpacity(1);
+    S.devices.forEach(d => { if (d.userData.labelSprite) d.userData.labelSprite.visible = S.showLabels; });
+    if (S.fieldMode === 'sel') clearField();
+  }
+
+  function selectCable(cable, opt) {
+    S.selCable = cable;
+    S.selDevice = null;
+    clearSelection3D();
+
+    const obj = S.cables.find(o => o.cable === cable);
+    if (!obj) {
+      // not in current cabinet -> switch cabinet to the panel side
+      const target = bestHostAsset(cable);
+      if (target && target.tag !== S.host) { setHost(target.tag, cable); return; }
+      renderDetails(cable);
+      return;
+    }
+
+    obj.mesh.material = selMat;
+    setCableOpacity(0.13);
+    obj.mesh.material = selMat;
+
+    tracer.visible = true;
+    ring.visible = true;
+    pulseT = 0;
+    const remColor = cable.__rem ? 0xff6b81 : 0x9ff0ff;
+    tracer.material.color.setHex(0xffffff);
+    tracer.material.emissive.setHex(remColor);
+    tracerLight.color.setHex(remColor);
+    ringMat.color.setHex(remColor);
+    showPin(cable, obj.term);
+
+    if (S.fieldMode === 'sel') buildField(cable);
+    else if (S.fieldMode === 'off') clearField();
+
+    S.devices.forEach(d => { if (d.userData.labelSprite) d.userData.labelSprite.visible = true; });
+
+    // camera focus on the landing terminal
+    const p = obj.term;
+    if (!opt || opt.focus !== false) focusPoint(new THREE.Vector3(p.x * 0.55, p.y + 8, -4), 62);
+
+    renderDetails(cable);
+    renderList();
+  }
+
+  function selectDevice(group) {
+    S.selDevice = group;
+    S.selCable = null;
+    clearSelection3D();
+    S.devices.forEach(d => { if (d.userData.labelSprite) d.userData.labelSprite.visible = (d === group) || S.showLabels; });
+    setCableOpacity(0.5);
+    focusPoint(group.position.clone().add(new THREE.Vector3(0, 4, 0)), 60);
+
+    const id = group.userData.id;
+    const rel = S.scope.filter(c => N(c.fromTag) === N(id) || N(c.toTag) === N(id));
+    renderDeviceDetails(id, rel);
+  }
+
+  /* --------------------------------------------------------------- camera */
+  let tween = null;
+  function focusPoint(target, dist) {
+    const dir = camera.position.clone().sub(controls.target).normalize();
+    const to = target.clone().add(dir.multiplyScalar(dist));
+    tween = { t: 0, dur: 760, fromP: camera.position.clone(), toP: to, fromT: controls.target.clone(), toT: target.clone() };
+  }
+
+  const VIEWS = {
+    iso:    { p: [100, 88, 132], t: [0, 42, 0] },
+    front:  { p: [0, 44, 168],   t: [0, 42, 0] },
+    back:   { p: [0, 58, -168],  t: [0, 42, 0] },
+    left:   { p: [-168, 52, 10], t: [0, 42, 0] },
+    right:  { p: [168, 52, 10],  t: [0, 42, 0] },
+    top:    { p: [0, 178, 18],   t: [0, 38, 0] },
+    inside: { p: [0, 46, 62],    t: [0, 46, -4] },
+    field:  { p: [36, 118, 246], t: [0, 12, 46] },
+    fit:    { p: [92, 80, 122],  t: [0, 42, 0] }
+  };
+
+  function fitDistance() {
+    const box = new THREE.Box3().setFromObject(cabinet);
+    const sphere = box.getBoundingSphere(new THREE.Sphere());
+    const vFov = camera.fov * Math.PI / 180;
+    const hFov = 2 * Math.atan(Math.tan(vFov / 2) * camera.aspect);
+    const fov = Math.min(vFov, hFov);
+    return (sphere.radius / Math.sin(fov / 2)) * 1.02;
+  }
+
+  function setView(name, instant) {
+    S.view = name;
+    const v = VIEWS[name] || VIEWS.iso;
+    let toP = new THREE.Vector3().fromArray(v.p);
+    const toT = new THREE.Vector3().fromArray(v.t);
+    if (name === 'fit') {
+      const dir = new THREE.Vector3(0.55, 0.42, 0.72).normalize();
+      toP = toT.clone().add(dir.multiplyScalar(fitDistance()));
+    }
+    if (name === 'field') {
+      /* frame the cabinet together with the far-end devices currently shown */
+      const box = new THREE.Box3().setFromObject(cabinet);
+      if (fieldGroup.children.length) box.expandByObject(fieldGroup);
+      const sphere = box.getBoundingSphere(new THREE.Sphere());
+      const vFov = camera.fov * Math.PI / 180;
+      const hFov = 2 * Math.atan(Math.tan(vFov / 2) * camera.aspect);
+      const fov = Math.min(vFov, hFov);
+      const dist = (sphere.radius / Math.sin(fov / 2)) * 1.06;
+      toT.copy(sphere.center);
+      toT.y = Math.max(toT.y * 0.55, 10);
+      const dir = new THREE.Vector3(0.26, 0.46, 0.85).normalize();
+      toP = toT.clone().add(dir.multiplyScalar(dist));
+    }
+    if (name === 'inside') setDoors(1);
+    if (instant) {
+      camera.position.copy(toP); controls.target.copy(toT); tween = null;
+    } else {
+      tween = { t: 0, dur: 820, fromP: camera.position.clone(), toP: toP, fromT: controls.target.clone(), toT: toT };
+    }
+    document.querySelectorAll('.vbtn').forEach(b => b.classList.toggle('active', b.dataset.view === name));
+  }
+
+  function setDoors(v) {
+    S.doorTarget = v;
+  }
+
+  /* ------------------------------------------------------------- UI: list */
+  const listEl = $('#list');
+  const filtersEl = $('#filters');
+  const FILTERS = [
+    { k: 'ALL', label: 'All' },
+    { k: 'E', label: 'Power' },
+    { k: 'I', label: 'Instrument' },
+    { k: 'T', label: 'Telecom' },
+    { k: 'LTG', label: 'Light' },
+    { k: 'REM', label: 'Missing' }
+  ];
+
+  function renderFilters() {
+    filtersEl.innerHTML = FILTERS.map(f =>
+      `<button class="chipf ${S.filter === f.k ? 'active' : ''}" data-f="${f.k}">${f.label}</button>`
+    ).join('');
+    filtersEl.querySelectorAll('.chipf').forEach(b => b.onclick = () => { S.filter = b.dataset.f; renderFilters(); renderAll(); });
+  }
+
+  function passesFilter(c) {
+    if (S.filter === 'ALL') return true;
+    if (S.filter === 'REM') return c.__rem === true;
+    return c.discipline === S.filter;
+  }
+
+  function matches(c, q) {
+    if (!q) return true;
+    const nq = N(q);
+    if (!nq) return true;
+    const hay = N([c.tag, c.fromTag, c.toTag, c.fromDesc, c.toDesc, c.fromLoc, c.toLoc,
+                   c.cableType, c.voltage, c.milestone, c.taskId, c.subsystem, c.drawing, c.remarks].join(' '));
+    if (hay.includes(nq)) return true;
+    // token search: every token must appear
+    const toks = String(q).toUpperCase().split(/[\s,\/]+/).map(N).filter(Boolean);
+    return toks.length > 1 && toks.every(t => hay.includes(t));
+  }
+
+  function matchAny(s, nq, toks) {
+    const n = N(s);
+    if (n.includes(nq)) return true;
+    return toks.length > 1 && toks.every(t => n.includes(t));
+  }
+
+  function matchReason(c, q) {
+    const nq = N(q);
+    const toks = String(q).toUpperCase().split(/[\s,\/]+/).map(N).filter(Boolean);
+    if (!nq) return '';
+    if (matchAny(c.tag, nq, toks)) return 'TAG';
+    if (matchAny(c.taskId, nq, toks)) return 'TASK';
+    if (matchAny(c.subsystem, nq, toks)) return 'SUBSYS';
+    if (matchAny(c.fromLoc, nq, toks) || matchAny(c.toLoc, nq, toks)) return 'LOCATION';
+    if (matchAny(c.fromTag, nq, toks) || matchAny(c.toTag, nq, toks)) return 'DEVICE';
+    if (matchAny(c.fromDesc, nq, toks) || matchAny(c.toDesc, nq, toks)) return 'DESC';
+    return 'MATCH';
+  }
+
+  function searchGroups(q) {
+    const nq = N(q);
+    if (!nq) return null;
+    const toks = String(q).toUpperCase().split(/[\s,\/]+/).map(N).filter(Boolean);
+    const has = s => matchAny(s, nq, toks);
+    const cables = C.filter(c => matches(c, q));
+    const devices = RAW.assets
+      .filter(a => a.count > 0 && !isBadTag(a.tag) && (has(a.tag) || has(a.desc) || has(a.loc)))
+      .sort((a, b) => b.count - a.count);
+    const locations = [...LOC_INDEX.entries()].filter(([k]) => has(k)).sort((a, b) => b[1] - a[1]);
+    const tasks = [...TASK_INDEX.entries()].filter(([k]) => has(k)).sort((a, b) => b[1] - a[1]);
+    const subsystems = [...SUB_INDEX.entries()].filter(([k]) => has(k)).sort((a, b) => b[1] - a[1]);
+    return { cables, devices, locations, tasks, subsystems };
+  }
+
+  /* every subsystem in the schedule, with its own stats */
+  let SUBSYS_STATS = null;
+  function subsysStats() {
+    if (SUBSYS_STATS) return SUBSYS_STATS;
+    const m = new Map();
+    C.forEach(c => {
+      const key = String(c.subsystem || '').trim() || '(unassigned)';
+      let rec = m.get(key);
+      if (!rec) { rec = { name: key, total: 0, pulled: 0, term: 0, rem: 0, disc: {}, panels: new Set() }; m.set(key, rec); }
+      rec.total++;
+      if (c.pulled) rec.pulled++;
+      if (c.terminated) rec.term++;
+      if (c.__rem) rec.rem++;
+      rec.disc[c.discipline] = (rec.disc[c.discipline] || 0) + 1;
+      [c.fromTag, c.toTag].forEach(t => { if (assetOf(t).inModel) rec.panels.add(t); });
+    });
+    SUBSYS_STATS = [...m.values()].sort((a, b) => b.total - a.total);
+    return SUBSYS_STATS;
+  }
+
+  function cardHTML(c) {
+    const dir = (N(c.toTag) === N(S.host)) ? 'IN' : 'OUT';
+    const otherTag = dir === 'IN' ? c.fromTag : c.toTag;
+    const otherDesc = dir === 'IN' ? c.fromDesc : c.toDesc;
+    const st = c.__state || (c.__rem ? MS.NONE : MS.BODY);
+    const cls = st === MS.NONE ? 'b-red' : st === MS.REF ? 'b-teal' : (c.pulled ? 'b-green' : 'b-gray');
+    const label = st === MS.NONE ? 'REM' : (c.pulled ? 'PULLED' : 'NOT PULLED');
+    return `<div class="card ${S.selCable && S.selCable.tag === c.tag ? 'sel' : ''}" data-tag="${esc(c.tag)}">
+      <div class="t"><span class="tag" title="${esc(c.tag)}">${esc(c.tag)}</span>
+        <span class="badge ${cls}">${label}</span></div>
+      <div class="route"><b>${dir}</b> ${esc(otherTag)}<br>${esc(otherDesc || c.toLoc || '')}</div>
+    </div>`;
+  }
+
+  function currentList() {
+    let arr;
+    if (S.tab === 'scope') arr = S.scope;
+    else if (S.tab === 'results') arr = S.results;
+    else arr = S.remCableList;
+    arr = (arr || []).filter(passesFilter);
+    if (S.query && S.tab === 'scope') arr = arr.filter(c => matches(c, S.query));
+    return arr;
+  }
+
+  function renderPins() {
+    const arr = S.cables;
+    $('#listCount').textContent = arr.length;
+    $('#listTitle').textContent = 'Exact landing points';
+    if (!arr.length) { listEl.innerHTML = `<div class="empty">No cables in this cabinet.</div>`; return; }
+    listEl.innerHTML = `<div class="note" style="margin:0 0 8px">Every slot of the cabinet in order. Click a row to travel to that terminal.</div>` +
+      arr.map(o => {
+        const c = o.cable;
+        const slotNo = (o.term.index % TERM_PER_STRIP) + 1;
+        const dir = N(c.toTag) === N(S.host) ? 'IN' : 'OUT';
+        const other = dir === 'IN' ? c.fromTag : c.toTag;
+        const col = cssColor(o.color);
+        return `<div class="card ${S.selCable && S.selCable.tag === c.tag ? 'sel' : ''}" data-tag="${esc(c.tag)}">
+          <div class="t"><span class="tag"><span style="color:${col}">■</span> ${esc(o.term.strip)} · ${String(slotNo).padStart(2, '0')}</span>
+            <span class="badge b-gray">${dir}</span></div>
+          <div class="route"><b>${esc(c.tag)}</b><br>${esc(other)}</div>
+        </div>`;
+      }).join('');
+    listEl.querySelectorAll('.card').forEach(card => card.onclick = () => {
+      const o = arr.find(x => x.cable.tag === card.dataset.tag);
+      if (o) selectCable(o.cable);
+    });
+  }
+
+  function renderRemDevices() {
+    const arr = S.remAssets;
+    const refOnly = RAW.assets.filter(a => !a.inModel && a.refs > 0).sort((x, y) => y.refs - x.refs).slice(0, 400);
+    $('#listCount').textContent = arr.length;
+    $('#listTitle').textContent = 'Model status — devices';
+    const all = `<div class="card" data-all="1">
+        <div class="t"><span class="tag">ALL CABLES WITH A MISSING END</span><span class="badge b-red">${S.remCableList.length}</span></div>
+        <div class="route">Cables where one end has no trace at all in the model export</div>
+      </div>`;
+    const shown = arr.slice(0, 300);
+    listEl.innerHTML = `<div class="note" style="margin:0 0 8px">Two different states, both listed. <b style="color:#ff7186">NOT FOUND</b> = no record in the asset export mentions the tag. <b style="color:#67d3c3">MODEL TAG</b> = the device has no record of its own, but other records (its cables / feeders) carry the tag — so it is present and no longer counted as REM.<br><span style="opacity:.8">${MS_SOURCE}</span></div>` + all +
+      `<div class="grouphead"><span>NOT FOUND IN MODEL</span><span class="badge b-red">${arr.length}</span></div>` +
+      (shown.length ? shown.map(a => `<div class="card" data-dev="${esc(a.tag)}">
+        <div class="t"><span class="tag" title="${esc(a.tag)}">${esc(a.tag)}</span><span class="badge b-red">${a.count}</span></div>
+        <div class="route">${esc(a.desc || 'no description')}<br>${esc(a.loc || '')}</div>
+      </div>`).join('') : `<div class="empty">Every device on this schedule is represented in the model export.</div>`) +
+      `<div class="grouphead" style="margin-top:10px"><span>PRESENT VIA CABLE / FEEDER ELEMENTS</span><span class="badge b-teal">${refOnly.length}${refOnly.length === 400 ? '+' : ''}</span></div>` +
+      refOnly.map(a => `<div class="card" data-dev="${esc(a.tag)}">
+        <div class="t"><span class="tag" title="${esc(a.tag)}">${esc(a.tag)}</span><span class="badge b-teal">${a.refs} el</span></div>
+        <div class="route">${esc(a.desc || 'no description')}<br><span style="opacity:.75">${esc(a.loc || '')}</span> · ${esc(a.refName)}</div>
+      </div>`).join('');
+    listEl.querySelectorAll('.card').forEach(card => card.onclick = () => {
+      if (card.dataset.all) {
+        S.tab = 'results'; S.query = ''; qEl.value = '';
+        S.results = S.remCableList.slice();
+        setTabUI(); renderList();
+        if (S.results[0]) selectCable(S.results[0]);
+        return;
+      }
+      const tag = card.dataset.dev;
+      S.query = tag; qEl.value = tag;
+      S.results = C.filter(c => N(c.fromTag) === N(tag) || N(c.toTag) === N(tag));
+      S.tab = 'results'; setTabUI(); renderList();
+      if (S.results.length) selectCable(S.results[0]);
+    });
+  }
+
+  function farEndDevices() {
+    const map = new Map();
+    S.cables.forEach(o => {
+      const end = externalEnd(o.cable);
+      if (!end) return;
+      const a = assetOf(end.tag);
+      const rec = map.get(end.tag) || {
+        tag: end.tag, desc: a.desc || end.desc, loc: a.loc || end.loc,
+        inModel: a.inModel, refs: a.refs || 0, state: modelState(a),
+        kind: deviceKind(a.desc || end.desc, end.tag), cables: []
+      };
+      rec.cables.push(o.cable);
+      map.set(end.tag, rec);
+    });
+    const order = {};
+    KIND_ORDER.forEach((k, i) => { order[k] = i; });
+    return [...map.values()].sort((a, b) => (order[a.kind] - order[b.kind]) || (b.cables.length - a.cables.length));
+  }
+
+  const KIND_BADGE = {
+    INSTRUMENT: 'b-violet', VALVE: 'b-green', JUNCTION: 'b-green', MOTOR: 'b-amber',
+    TRANSFORMER: 'b-red', GENERATOR: 'b-amber', POWER: 'b-red', PANEL: 'b-blue',
+    LIGHT: 'b-amber', HVAC: 'b-green', DEVICE: 'b-gray', SKID: 'b-amber',
+    SPEAKER: 'b-blue', CAMERA: 'b-violet', BEACON: 'b-amber', READER: 'b-green',
+    CONTACT: 'b-green', SOCKET: 'b-blue', WAP: 'b-teal', PHONE: 'b-red',
+    PUMP: 'b-blue', DETECTOR: 'b-amber'
+  };
+
+  const KIND_LABEL = {
+    INSTRUMENT: 'Sensors', VALVE: 'Valves', MOTOR: 'Motors / pumps', JUNCTION: 'Junction boxes',
+    TRANSFORMER: 'Transformers', GENERATOR: 'Generators', POWER: 'Chargers / UPS', PANEL: 'Panels',
+    LIGHT: 'Lighting', HVAC: 'HVAC', DEVICE: 'Other devices', SKID: 'Skids / packages',
+    SPEAKER: 'PAGA speakers', CAMERA: 'Cameras', BEACON: 'Beacons', READER: 'Card readers',
+    CONTACT: 'Door / gate contacts', SOCKET: 'Data sockets', WAP: 'Wireless / antenna',
+    PHONE: 'Telephones / intercom', PUMP: 'Pumps', DETECTOR: 'Gas / fire detectors'
+  };
+
+  /* drawing order used by every list and legend */
+  const KIND_ORDER = ['VALVE', 'SKID', 'INSTRUMENT', 'MOTOR', 'TRANSFORMER', 'GENERATOR', 'POWER',
+    'PANEL', 'JUNCTION', 'PUMP', 'SPEAKER', 'CAMERA', 'BEACON', 'READER', 'CONTACT', 'SOCKET', 'WAP',
+    'PHONE', 'DETECTOR', 'LIGHT', 'HVAC', 'DEVICE'];
+
+  /* picture of a device: real Navisworks render if it exists, otherwise a
+     render of its own 3D model */
+  const DEV_PIC_MEM = new Map();
+  function DEV_PIC(kind, desc, tag) {
+    const key = kind + '|' + (desc || '') + '|' + (tag || '');
+    if (DEV_PIC_MEM.has(key)) return DEV_PIC_MEM.get(key);
+    let url = '';
+    try {
+      const real = window.CAB3D_PIC && window.CAB3D_PIC.realFor ? window.CAB3D_PIC.realFor(tag) : null;
+      url = real || (window.CAB3D_PIC ? window.CAB3D_PIC.thumbFor(kind, desc, tag) : '');
+    } catch (e) { url = ''; }
+    DEV_PIC_MEM.set(key, url);
+    return url;
+  }
+
+  /* ---------------------------------------------------------------- real geometry
+     window.C3D_GEO holds what the Navisworks model really contains:
+     [cx,cy,cz, sx,sy,sz, hasGeometry, itemCount] in metres with Z up.
+     The app works in units where 1 unit = 10 mm and Y is up, so:
+        x = X_m * 100        z = Y_m * 100        y = Z_m * 100
+     Positions are kept relative to the site origin (the model is ~2.5 km wide),
+     so the site view divides by SITE_SCALE to stay inside the viewport. */
+  const GEO = window.C3D_GEO || {};
+
+  function geoOf(tag) {
+    const g = GEO[tag];
+    if (!g) return null;
+    return {
+      c: [g[0] * 100, g[2] * 100, g[1] * 100],    // x, y(up), z  in cm
+      s: [g[3] * 100, g[5] * 100, g[4] * 100],
+      real: g[6] === 1,
+      items: g[7]
+    };
+  }
+
+  function geoStats() {
+    let total = 0, inModel = 0;
+    for (const k in S.C.assets || {}) { total++; if (GEO[k]) inModel++; }
+    return { total, inModel };
+  }
+
+  window.CAB3D_KIND_SHAPE = KIND_SHAPE;
+  window.CAB3D_KIND_COLOR = KIND_COLOR;
+
+  function renderDevices() {
+    const all = farEndDevices();
+    S.farDevices = all;
+    $('#nDevices').textContent = all.length;
+    $('#listTitle').textContent = 'Far-end devices of this cabinet';
+    if (!all.length) { $('#listCount').textContent = 0; listEl.innerHTML = `<div class="empty">No far-end devices for this cabinet.</div>`; return; }
+
+    /* real per-kind counts from the schedule */
+    const counts = {};
+    all.forEach(d => { counts[d.kind] = (counts[d.kind] || 0) + 1; });
+    const order = ['INSTRUMENT', 'VALVE', 'MOTOR', 'TRANSFORMER', 'GENERATOR', 'JUNCTION', 'PANEL', 'POWER', 'LIGHT', 'HVAC', 'DEVICE'];
+    const active = S.devKindFilter || 'ALL';
+    const arr = active === 'ALL' ? all : all.filter(d => d.kind === active);
+    $('#listCount').textContent = arr.length;
+
+    const chip = (key, label, n) =>
+      `<button class="chipf${active === key ? ' active' : ''}" data-kind="${key}">${label} <span class="k">${n}</span></button>`;
+    const chips = `<div class="filters" style="border:0;padding:0 0 8px">
+      ${chip('ALL', 'All', all.length)}
+      ${order.filter(k => counts[k]).map(k => chip(k, KIND_LABEL[k] || k, counts[k])).join('')}
+    </div>`;
+
+    const inst = counts.INSTRUMENT || 0;
+    listEl.innerHTML = `<div class="note" style="margin:0 0 8px">Other side of this cabinet’s cables · ${inst} sensors · ${all.length} total. Click one to place it in the 3D scene.</div>
+      <div class="btnrow" style="margin:0 0 8px"><button class="btn" id="placeAll">Place all ${arr.length} in 3D</button></div>
+      ${chips}` +
+      (arr.length ? arr.map(d => `<div class="card devcard" data-dev="${esc(d.tag)}">
+        <img class="devpic" alt="" src="${DEV_PIC(d.kind, d.desc, d.tag)}">
+        <div class="t"><span class="tag" title="${esc(d.tag)}">${esc(d.tag)}</span>
+          <span class="badge ${KIND_BADGE[d.kind] || 'b-gray'}">${d.kind}</span></div>
+        <div class="route">${esc(d.desc || 'no description')}<br>
+          <span style="opacity:.75">${esc(d.loc || '')}</span>
+          ${d.state === MS.NONE ? ' · <span style="color:#ff7186">REM</span>' : d.state === MS.REF ? ' · <span style="color:#67d3c3">model tag</span>' : ''} · ${d.cables.length} cable${d.cables.length === 1 ? '' : 's'}</div>
+      </div>`).join('') : `<div class="empty">No ${KIND_LABEL[active] || active} on this cabinet’s cables.</div>`);
+
+    listEl.querySelectorAll('.chipf').forEach(b => b.onclick = () => {
+      S.devKindFilter = b.dataset.kind;
+      renderDevices();
+    });
+    listEl.querySelectorAll('.card').forEach(card => card.onclick = () => {
+      const d = arr.find(x => x.tag === card.dataset.dev);
+      if (!d) return;
+      const c = d.cables[0];
+      if (c) selectCable(c, { focus: false });
+      if (S.fieldMode === 'off') { S.fieldMode = 'sel'; toggleTool($('#tField'), true); refreshField(); }
+      const node = fieldGroup.children.find(g => g.userData && g.userData.tag === d.tag);
+      if (node) focusPoint(node.position.clone().add(new THREE.Vector3(0, 9, 0)), 58);
+      else setView('field');
+      renderDeviceDetails(d.tag, d.cables);
+    });
+    const pa = $('#placeAll');
+    if (pa) pa.onclick = () => {
+      S.fieldMode = 'all';
+      toggleTool($('#tField'), true);
+      const lbl = $('#tField');
+      if (lbl) lbl.innerHTML = '<span class="sw"></span>Field all';
+      refreshField();
+      setView('field');
+      toast(all.length + ' far-end devices placed around the cabinet');
+    };
+  }
+
+  /* ------------------------------------------------------ UI: search results */
+  function renderSearchResults() {
+    const g = S.searchGroups;
+    if (!g) return;
+    const cables = g.cables.filter(passesFilter);
+    $('#listCount').textContent = g.cables.length;
+    $('#listTitle').textContent = 'Search: ' + S.query;
+    const sec = (label, n, body, note) => body
+      ? `<div class="grouphead"><span>${label}</span><span class="badge b-gray">${n}</span></div>${note ? `<div class="note" style="margin:-2px 0 7px">${note}</div>` : ''}${body}`
+      : '';
+    const devCards = g.devices.slice(0, 6).map(a => {
+      const kind = deviceKind(a.desc, a.tag);
+      return `<div class="card" data-dev="${esc(a.tag)}">
+        <div class="t"><span class="tag" title="${esc(a.tag)}">${esc(a.tag)}</span>
+          <span class="badge ${KIND_BADGE[kind] || 'b-gray'}">${kind}</span></div>
+        <div class="route">${esc(a.desc || 'no description')}<br><span style="opacity:.75">${esc(a.loc || '')}</span> · ${a.count} cable${a.count === 1 ? '' : 's'}${a.inModel ? '' : (a.refs ? ' · <span style="color:#67d3c3">model tag</span>' : ' · <span style="color:#ff7186">REM</span>')}</div>
+      </div>`;
+    }).join('');
+    const locCards = g.locations.slice(0, 5).map(([k, n]) => `<div class="card" data-q="${esc(k)}">
+        <div class="t"><span class="tag"><span style="opacity:.6">LOCATION</span> ${esc(k)}</span><span class="badge b-gray">${n}</span></div>
+      </div>`).join('');
+    const taskCards = g.tasks.slice(0, 5).map(([k, n]) => `<div class="card" data-q="${esc(k)}">
+        <div class="t"><span class="tag">${esc(k)}</span><span class="badge b-amber">TASK</span><span class="badge b-gray">${n}</span></div>
+        <div class="route">${n} cable${n === 1 ? '' : 's'} in this task</div>
+      </div>`).join('');
+    const subCards = g.subsystems.slice(0, 5).map(([k, n]) => `<div class="card" data-q="${esc(k)}">
+        <div class="t"><span class="tag" title="${esc(k)}">${esc(k)}</span><span class="badge b-violet">SUBSYSTEM</span></div>
+        <div class="route">${n} cable${n === 1 ? '' : 's'}</div>
+      </div>`).join('');
+    const shown = cables.slice(0, 200);
+    const cabCards = shown.map(c => {
+      const reason = matchReason(c, S.query);
+      const card = cardHTML(c);
+      return card.replace('<span class="badge', `<span class="badge b-blue" style="margin-right:4px">${reason}</span><span class="badge`);
+    }).join('');
+    listEl.innerHTML =
+      sec('Devices & assets', g.devices.length, devCards, g.devices.length > 6 ? `showing 6 of ${g.devices.length}` : '') +
+      sec('Locations', g.locations.length, locCards, g.locations.length > 5 ? `showing 5 of ${g.locations.length}` : '') +
+      sec('Tasks', g.tasks.length, taskCards, g.tasks.length > 5 ? `showing 5 of ${g.tasks.length}` : '') +
+      sec('Subsystems', g.subsystems.length, subCards, g.subsystems.length > 5 ? `showing 5 of ${g.subsystems.length}` : '') +
+      sec('Cables', cables.length, cabCards || `<div class="empty">No cable matches this text.</div>`,
+        cables.length > shown.length ? `showing ${shown.length} of ${cables.length} — refine the search` : '');
+    listEl.querySelectorAll('.card').forEach(card => {
+      card.onclick = () => {
+        if (card.dataset.dev) {
+          const tag = card.dataset.dev;
+          qEl.value = tag; doSearch(tag);
+          return;
+        }
+        if (card.dataset.q) {
+          qEl.value = card.dataset.q; doSearch(card.dataset.q);
+          return;
+        }
+        const c = cables.find(x => x.tag === card.dataset.tag);
+        if (c) selectCable(c);
+      };
+    });
+  }
+
+  /* -------------------------------------------------- UI: subsystems browser */
+  function renderSubsystems() {
+    const subs = subsysStats();
+    const total = C.length;
+    S.subsystems = subs;
+    $('#nSubs').textContent = subs.length;
+    $('#listCount').textContent = subs.length;
+    $('#listTitle').textContent = 'All subsystems in the schedule';
+    listEl.innerHTML = `<div class="note" style="margin:0 0 8px">${subs.length} subsystems · ${total} cables · click one to list every cable in it (all cabinets).</div>` +
+      subs.map(s => {
+        const pct = Math.round(s.pulled / s.total * 100);
+        const d = Object.entries(s.disc).map(([k, v]) => k + ':' + v).join(' · ');
+        return `<div class="card" data-sub="${esc(s.name)}">
+          <div class="t"><span class="tag" title="${esc(s.name)}">${esc(s.name)}</span>
+            <span class="badge b-gray">${s.total}</span>
+            ${s.rem ? `<span class="badge b-red">REM ${s.rem}</span>` : ''}</div>
+          <div class="route">${d} · ${s.panels.size} panels in model<br>
+            pulled ${s.pulled}/${s.total} (${pct}%) · terminated ${s.term}</div>
+          <div style="height:4px;border-radius:3px;background:rgba(255,255,255,.07);margin-top:6px;overflow:hidden">
+            <div style="height:100%;width:${pct}%;background:linear-gradient(90deg,#5cc7f2,#54ffc0)"></div></div>
+        </div>`;
+      }).join('');
+    listEl.querySelectorAll('.card').forEach(card => card.onclick = () => {
+      const name = card.dataset.sub;
+      S.query = ''; qEl.value = '';
+      S.results = C.filter(c => (String(c.subsystem || '').trim() || '(unassigned)') === name);
+      S.resultTitle = 'Subsystem · ' + name;
+      S.tab = 'results'; setTabUI(); renderList();
+      if (S.results[0]) selectCable(S.results[0]);
+    });
+  }
+
+  function renderList() {
+    if (S.tab === 'rem') { renderRemDevices(); return; }
+    if (S.tab === 'pins') { renderPins(); return; }
+    if (S.tab === 'devices') { renderDevices(); return; }
+    if (S.tab === 'subs') { renderSubsystems(); return; }
+    if (S.tab === 'results' && S.query.trim()) { renderSearchResults(); return; }
+    const arr = currentList();
+    const shown = arr.slice(0, 400);
+    $('#listCount').textContent = arr.length;
+    $('#listTitle').textContent = S.tab === 'rem' ? 'Cables with missing device'
+                            : S.tab === 'results' ? (S.resultTitle || (S.query ? 'Search results' : 'All cables for search')) : 'Cables in this cabinet';
+    const capped = (S.tab === 'scope' && arr.length > S.cables.length)
+      ? `<div class="note" style="margin:0 0 8px">3D shows the first ${S.cables.length} termination slots. Search any tag to trace it.</div>` : '';
+    if (!shown.length) {
+      listEl.innerHTML = `<div class="empty">No cables for this filter.<br><br>Try <b>ALL</b>, or search another tag.</div>`;
+      return;
+    }
+    listEl.innerHTML = capped + shown.map(cardHTML).join('') +
+      (arr.length > shown.length ? `<div class="empty">+ ${arr.length - shown.length} more — refine the search.</div>` : '');
+    listEl.querySelectorAll('.card').forEach(card => {
+      card.onclick = () => {
+        const c = arr.find(x => x.tag === card.dataset.tag);
+        if (c) selectCable(c);
+      };
+    });
+  }
+
+  /* ----------------------------------------------------------- UI: REM tab */
+  function computeRem() {
+    // a cable is REM only when an end has no trace at all in the asset export
+    const missing = new Map();
+    C.forEach(c => {
+      const a = assetOf(c.fromTag), b = assetOf(c.toTag);
+      const sa = modelState(a), sb = modelState(b);
+      const miss = [];
+      if (sa === MS.NONE) miss.push(a);
+      if (sb === MS.NONE) miss.push(b);
+      c.__state = joinState(sa, sb);
+      c.__rem = miss.length > 0;
+      c.__miss = miss;
+      miss.forEach(m => {
+        if (!m.tag || isBadTag(m.tag)) return;
+        const rec = missing.get(m.tag) || { tag: m.tag, desc: m.desc, loc: m.loc, count: 0 };
+        rec.count++; missing.set(m.tag, rec);
+      });
+    });
+    S.remAssets = [...missing.values()].sort((a, b) => b.count - a.count);
+    S.remCableList = C.filter(c => c.__rem);
+    S.refCableList = C.filter(c => c.__state === MS.REF);
+  }
+
+  /* -------------------------------------------------------------- details */
+  const detailsEl = $('#details');
+
+  function fallbackCopy(txt, msg) {
+    const ta = document.createElement('textarea');
+    ta.value = txt; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); toast(msg); } catch (e) { toast('Copy failed'); }
+    document.body.removeChild(ta);
+  }
+  function copyText(txt, msg) {
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(txt).then(() => toast(msg)).catch(() => fallbackCopy(txt, msg));
+        return;
+      }
+    } catch (e) { /* fall through */ }
+    fallbackCopy(txt, msg);
+  }
+
+  function statusChips(c) {
+    const chips = [];
+    chips.push(c.pulled ? `<span class="badge b-green">PULLED</span>` : `<span class="badge b-gray">NOT PULLED</span>`);
+    chips.push(c.terminated ? `<span class="badge b-green">TERMINATED</span>` : `<span class="badge b-amber">NOT TERMINATED</span>`);
+    const st = c.__state || (c.__rem ? MS.NONE : MS.BODY);
+    chips.push(`<span class="badge ${MS_BADGE[st]}">${MS_TEXT[st]}</span>`);
+    if (c.discipline) chips.push(`<span class="badge b-gray">${esc(c.discipline)}</span>`);
+    return `<div class="dchips">${chips.join('')}</div>`;
+  }
+
+  function kv(k, v) { return `<div class="kv"><span class="k">${k}</span><span class="v">${v == null || v === '' ? '—' : esc(v)}</span></div>`; }
+
+  function circuitSVG(c) {
+    const col = cssColor(cableColor(c));
+    const aF = assetOf(c.fromTag), aT = assetOf(c.toTag);
+    const sF = modelState(aF), sT = modelState(aT);
+    const stroke = s => s === MS.NONE ? '#a04052' : s === MS.REF ? '#2f7f76' : '#2f6379';
+    const label = s => s === MS.NONE ? 'NOT IN MODEL' : s === MS.REF ? 'MODEL TAG' : 'IN MODEL';
+    const obj = S.cables.find(o => o.cable === c);
+    const slot = obj ? String(obj.term.index + 1).padStart(2, '0') : '--';
+    const cut = s => (s || '').length > 17 ? s.slice(0, 16) + '…' : (s || '');
+    return `<svg viewBox="0 0 344 104" style="width:100%;height:auto;display:block">
+      <rect x="1" y="20" width="98" height="54" rx="9" fill="#0d2230" stroke="${stroke(sF)}"/>
+      <text x="50" y="34" fill="#7fa3b8" font-size="7" font-family="Consolas,monospace" text-anchor="middle" letter-spacing="1.2">FROM</text>
+      <text x="50" y="50" fill="#9fe9ff" font-size="8.5" font-family="Consolas,monospace" text-anchor="middle">${esc(cut(c.fromTag))}</text>
+      <text x="50" y="64" fill="${sF === MS.NONE ? '#ff7186' : '#6f8fa3'}" font-size="6.5" font-family="Consolas,monospace" text-anchor="middle">${label(sF)}</text>
+
+      <rect x="124" y="12" width="96" height="70" rx="9" fill="#0a1a24" stroke="${c.__rem ? '#a04052' : '#3d7c96'}"/>
+      <text x="172" y="26" fill="#7fa3b8" font-size="7" font-family="Consolas,monospace" text-anchor="middle" letter-spacing="1.2">CABINET</text>
+      <text x="172" y="42" fill="#e6f6ff" font-size="7.5" font-family="Consolas,monospace" text-anchor="middle">${cut(S.host)}</text>
+      <text x="172" y="57" fill="${col}" font-size="7.5" font-family="Consolas,monospace" text-anchor="middle">TB slot ${slot}</text>
+      <text x="172" y="71" fill="#6f8fa3" font-size="6.5" font-family="Consolas,monospace" text-anchor="middle">TERMINATION</text>
+
+      <rect x="245" y="20" width="98" height="54" rx="9" fill="#0d2230" stroke="${stroke(sT)}"/>
+      <text x="294" y="34" fill="#7fa3b8" font-size="7" font-family="Consolas,monospace" text-anchor="middle" letter-spacing="1.2">TO</text>
+      <text x="294" y="50" fill="#9fe9ff" font-size="8.5" font-family="Consolas,monospace" text-anchor="middle">${esc(cut(c.toTag))}</text>
+      <text x="294" y="64" fill="${sT === MS.NONE ? '#ff7186' : '#6f8fa3'}" font-size="6.5" font-family="Consolas,monospace" text-anchor="middle">${label(sT)}</text>
+
+      <path d="M99 47 H124" stroke="${col}" stroke-width="2.4" fill="none"/>
+      <path d="M220 47 H245" stroke="${col}" stroke-width="2.4" fill="none"/>
+      <circle cx="112" cy="47" r="2.6" fill="${col}"/>
+      <circle cx="232" cy="47" r="2.6" fill="${col}"/>
+      <text x="172" y="96" fill="#6f8fa3" font-size="6.5" font-family="Consolas,monospace" text-anchor="middle">${esc(c.cableType || '')} · ${esc(c.cores || '')} · ${esc(c.size || '')} mm²</text>
+    </svg>`;
+  }
+
+  function endpoint(label, tag, desc, loc, asset) {
+    const st = modelState(asset);
+    const mark = st === MS.BODY
+      ? `<span style="color:#8fb6ca">• IN ASSET REGISTER</span>`
+      : st === MS.REF
+        ? `<span style="color:#67d3c3">• REGISTER REFERENCE · ${asset.refs}</span>`
+        : `<span style="color:#ff7186">• NOT IN ASSET REGISTER</span>`;
+    return `<div class="endpoint">
+      <div class="lbl">${label} ${mark}</div>
+      <div class="tg">${esc(tag) || '—'}</div>
+      <div class="ds">${esc(desc) || ''}</div>
+      <div class="lc">${esc(loc) || ''}</div>
+      ${st === MS.REF ? `<div class="lc" style="font-family:var(--mono);font-size:.58rem">${esc(asset.refName)}${asset.refs > 1 ? ' +' + (asset.refs - 1) : ''}</div>` : ''}
+    </div>`;
+  }
+
+  function renderDetails(c) {
+    const aF = assetOf(c.fromTag), aT = assetOf(c.toTag);
+    const obj = S.cables.find(o => o.cable === c);
+    $('#detailTag').textContent = c.tag;
+
+    let html = `<div class="dtitle">${esc(c.tag)}</div>${statusChips(c)}`;
+
+    /* explicit FROM -> cable -> TO chain */
+    const fIn = N(c.fromTag) === N(S.host), tIn = N(c.toTag) === N(S.host);
+    const chain = `
+      <div class="chain">
+        <div class="chainbox ${fIn ? 'here' : (modelState(aF) === MS.NONE ? 'rem' : modelState(aF) === MS.REF ? 'ref' : '')}">
+          <div class="cl">FROM</div>
+          <div class="ct">${esc(c.fromTag || '—')}</div>
+          <div class="cs">${esc((c.fromDesc || '').slice(0, 44))}</div>
+          <div class="cl2">${esc(c.fromLoc || '')}</div>
+        </div>
+        <div class="chainmid">
+          <div class="arrow">→</div>
+          <div class="cabletag">${esc(c.tag)}</div>
+          <div class="cablesub">${esc(c.cores || '')} · ${esc(c.size || '')} mm² ${c.pulled ? '· PULLED' : '· NOT PULLED'}</div>
+        </div>
+        <div class="chainbox ${tIn ? 'here' : (modelState(aT) === MS.NONE ? 'rem' : modelState(aT) === MS.REF ? 'ref' : '')}">
+          <div class="cl">TO</div>
+          <div class="ct">${esc(c.toTag || '—')}</div>
+          <div class="cs">${esc((c.toDesc || '').slice(0, 44))}</div>
+          <div class="cl2">${esc(c.toLoc || '')}</div>
+        </div>
+      </div>
+      <div class="note">${fIn ? 'FROM this cabinet' : tIn ? 'TO this cabinet' : 'Neither end is the open cabinet'} · arrow shows the scheduled direction (From → To).</div>`;
+
+    html += chain;
+
+    html += `<div class="sect"><h4>Circuit</h4><div style="border:1px solid rgba(255,255,255,.05);border-radius:10px;padding:6px;background:rgba(8,20,28,.6)">${circuitSVG(c)}</div></div>`;
+
+    html += `<div class="sect"><h4>Route</h4>
+      ${endpoint('From', c.fromTag, c.fromDesc, c.fromLoc, aF)}
+      ${endpoint('To', c.toTag, c.toDesc, c.toLoc, aT)}
+    </div>`;
+
+    const far = externalEnd(c);
+    if (far) {
+      const fa = assetOf(far.tag);
+      const st = modelState(fa);
+      const kind = deviceKind(fa.desc || far.desc, far.tag);
+      const modelText = st === MS.BODY
+        ? 'Present — the register has a record with this tag'
+        : st === MS.REF
+          ? `Present — referenced by ${fa.refs} register record${fa.refs === 1 ? '' : 's'} (${fa.refCable ? 'cable / feeder records' : 'records'})`
+          : 'No register record mentions this tag — shown as REM';
+      html += `<div class="sect"><h4>Far end (${far.dir === 'FROM' ? 'source side' : 'destination side'})</h4>
+        ${kv('Device', far.tag)}
+        ${kv('Kind', kind)}
+        ${kv('Description', fa.desc || far.desc || '—')}
+        ${kv('Location', fa.loc || far.loc || '—')}
+        ${kv('3D model', modelText)}
+        ${st === MS.REF ? `<div class="note" style="font-family:var(--mono);font-size:.66rem">e.g. ${esc(fa.refName)}${fa.refs > 1 ? ' +' + (fa.refs - 1) + ' more' : ''}</div>` : ''}
+        <div class="note">${MS_SOURCE}</div>
+        <div class="btnrow"><button class="btn" id="fieldBtn">Show far end in 3D</button>
+          <button class="btn" id="fieldAllBtn">Show all far ends</button></div>
+        <div class="note">The far end is drawn outside the cabinet, with the cable entering through the gland.</div>
+      </div>`;
+    }
+
+    html += `<div class="sect"><h4>Cable data</h4>
+      ${kv('Discipline', c.discipline)}
+      ${kv('Type', c.cableType)}
+      ${kv('Voltage', c.voltage)}
+      ${kv('Cores', c.cores)}
+      ${kv('Size (mm²)', c.size)}
+      ${kv('Length (m)', c.length)}
+      ${kv('Pulled date', c.pullDate)}
+      ${kv('Termination date', c.termDate)}
+      ${kv('Milestone', c.milestone)}
+      ${kv('Task ID', c.taskId)}
+      ${kv('Task state', c.taskState)}
+      ${kv('Routing dwg', c.drawing)}
+      ${kv('Subsystem', c.subsystem)}
+    </div>`;
+
+    html += `<div class="sect"><h4>Termination in cabinet</h4>`;
+    if (obj) {
+      const stripIdx = Math.floor(obj.term.index / TERM_PER_STRIP);
+      const slotNo = (obj.term.index % TERM_PER_STRIP) + 1;
+      const rowNo = Math.floor(stripIdx / 3) + 1;
+      const locText = S.host + ' / ' + obj.term.strip + ' / slot ' + String(slotNo).padStart(2, '0');
+      html += kv('Cabinet', S.host);
+      html += kv('Terminal strip', obj.term.strip + ' (row ' + rowNo + ' of 4)');
+      html += kv('Slot on strip', String(slotNo).padStart(2, '0') + ' / ' + TERM_PER_STRIP);
+      html += kv('Gland', 'G-' + String(obj.gland + 1).padStart(2, '0') + ' · bottom entry');
+      html += kv('Duct', obj.side === 'left' ? 'Left vertical duct' : 'Right vertical duct');
+      html += kv('Screen / core', (c.cores || '—') + ' · ' + (c.size || '—') + ' mm²');
+      html += `<div class="note" style="font-family:var(--mono);font-size:.72rem">${esc(locText)}</div>`;
+      html += `<div class="btnrow"><button class="btn" id="copyLoc">Copy exact location</button></div>`;
+      html += `<div class="note">Slot numbers are generated for the 3D layout — the schedule does not carry TB numbers.</div>`;
+    } else {
+      html += `<div class="warn">This cable is not attached to the cabinet currently opened in 3D.</div>
+        <div class="btnrow"><button class="btn" id="jumpBtn">Open its cabinet</button></div>`;
+    }
+    html += `</div>`;
+
+    if (c.__rem) {
+      const names = (c.__miss || []).map(m => `<b>${esc(m.tag)}</b> — ${esc(m.desc || 'no description')}`).join('<br>');
+      html += `<div class="warn"><b>REM — no asset-register record mentions this end</b><br>${names || ''}<br><span style="opacity:.75">${MS_SOURCE}</span></div>`;
+    } else if (c.__state === MS.REF) {
+      html += `<div class="ok" style="border-color:rgba(103,211,195,.32);background:rgba(103,211,195,.07);color:#a9e6dd">
+        <b>Both ends are in the asset export.</b><br>One end has no record of its own — its tag is carried by the cable / feeder records, so it is not a REM.<br><span style="opacity:.75">${MS_SOURCE}</span></div>`;
+    } else {
+      html += `<div class="ok">Both ends have their own record in the asset export.<br><span style="opacity:.75">${MS_SOURCE}</span></div>`;
+    }
+
+    if (c.remarks) html += `<div class="sect"><h4>Remarks</h4><div class="note">${esc(c.remarks)}</div></div>`;
+
+    html += `<div class="btnrow">
+      <button class="btn" id="focusBtn">Focus</button>
+      <button class="btn muted" id="copyBtn">Copy tag</button>
+    </div>`;
+
+    detailsEl.innerHTML = html;
+    const fb = $('#focusBtn'); if (fb) fb.onclick = () => selectCable(c);
+    const cb = $('#copyBtn'); if (cb) cb.onclick = () => copyText(c.tag, 'Tag copied');
+    const cl = $('#copyLoc'); if (cl) cl.onclick = () => {
+      const o = S.cables.find(x => x.cable === c);
+      if (!o) return;
+      const slotNo = (o.term.index % TERM_PER_STRIP) + 1;
+      const txt = S.host + ' | ' + c.tag + ' | ' + o.term.strip + ' | slot ' + String(slotNo).padStart(2, '0') +
+                  ' | ' + (o.side === 'left' ? 'LEFT' : 'RIGHT') + ' duct | gland G-' + String(o.gland + 1).padStart(2, '0');
+      copyText(txt, 'Location copied');
+    };
+    const jb = $('#jumpBtn'); if (jb) jb.onclick = () => {
+      const target = bestHostAsset(c);
+      if (target) setHost(target.tag, c);
+    };
+    const fbn = $('#fieldBtn'); if (fbn) fbn.onclick = () => {
+      if (S.fieldMode === 'off') { S.fieldMode = 'sel'; toggleTool($('#tField'), true); }
+      S.fieldMode = 'sel'; refreshField();
+      setView('field');
+      toast('Far end shown — ' + (far ? far.tag : ''));
+    };
+    const fab = $('#fieldAllBtn'); if (fab) fab.onclick = () => {
+      S.fieldMode = 'all'; toggleTool($('#tField'), true); refreshField();
+      setView('field');
+      toast('Showing every far end in this cabinet');
+    };
+  }
+
+  function renderDeviceDetails(id, rel) {
+    $('#detailTag').textContent = id;
+    const a = assetOf(id);
+    const st = modelState(a);
+    detailsEl.innerHTML = `
+      <div class="dtitle">${esc(id)}</div>
+      <div class="dchips">
+        <span class="badge ${MS_BADGE[st]}">${MS_TEXT[st]}</span>
+        <span class="badge b-gray">${rel.length} CABLES</span>
+      </div>
+      ${endpoint('Device', id, a.desc, a.loc, a)}
+      ${st === MS.REF ? `<div class="sect"><h4>Register records carrying this tag</h4>
+        <div class="note" style="font-family:var(--mono);font-size:.66rem">${esc(a.refName)}${a.refs > 1 ? '<br>+ ' + (a.refs - 1) + ' more record(s)' : ''}</div>
+        <div class="note">This device has no register record of its own, but the asset export has ${a.refs} ${a.refCable ? 'cable / feeder' : ''} record${a.refs === 1 ? '' : 's'} that name it — so it is present in the export.</div>
+      </div>` : ''}
+      <div class="sect"><h4>Cables at this device</h4>
+        ${rel.slice(0, 40).map(c => `<div class="kv" data-tag="${esc(c.tag)}"><span class="k">${esc(c.tag)}</span><span class="v">${esc(c.toTag === id ? c.fromTag : c.toTag)}</span></div>`).join('') || '<div class="empty">No cables in this cabinet scope.</div>'}
+      </div>
+      <div class="note">Click any cable above, or pick it from the list, to trace it inside the cabinet.</div>`;
+    detailsEl.querySelectorAll('.kv[data-tag]').forEach(r => r.onclick = () => {
+      const c = C.find(x => x.tag === r.dataset.tag);
+      if (c) selectCable(c);
+    });
+  }
+
+  /* --------------------------------------------------------------- host UI */
+  const hostSel = $('#hostSel');
+  function fillHostSelect() {
+    const list = RAW.assets.filter(a => a.count > 0 && !isBadTag(a.tag)).slice(0, 260);
+    hostSel.innerHTML = list.map(a => {
+      const st = modelState(a);
+      return `<option value="${esc(a.tag)}" ${a.tag === S.host ? 'selected' : ''}>${esc(a.tag)} — ${a.count} cables${st === MS.NONE ? ' (not in register)' : st === MS.REF ? ' (model tag)' : ''}</option>`;
+    }).join('');
+  }
+
+  function setHost(tag, autoSelect) {
+    S.host = tag;
+    S.devKindFilter = 'ALL';
+    const hostAsset = assetOf(tag);
+
+    cabinet.remove(hostLabel);
+    if (hostLabel.material.map) hostLabel.material.map.dispose();
+    hostLabel.material.dispose();
+    hostLabel = makeLabel(tag, 8, '#9fe9ff', '#06202c');
+    hostLabel.position.set(0, 90, 0);
+    cabinet.add(hostLabel);
+
+    S.scope = C.filter(c => N(c.fromTag) === N(tag) || N(c.toTag) === N(tag));
+    // incoming first (cable TO this cabinet), then outgoing, then by tag
+    S.scope.sort((a, b) => {
+      const ia = N(a.toTag) === N(tag) ? 0 : 1;
+      const ib = N(b.toTag) === N(tag) ? 0 : 1;
+      if (ia !== ib) return ia - ib;
+      return a.tag > b.tag ? 1 : a.tag < b.tag ? -1 : 0;
+    });
+    buildCables();
+    if (S.fieldMode === 'all') buildFieldAll();
+    else if (S.fieldMode === 'off') clearField();
+    else clearField();
+    hostSel.value = tag;
+    $('#nScope').textContent = S.scope.length;
+    if (autoSelect) {
+      selectCable(autoSelect);
+    } else {
+      S.selCable = null;
+      clearSelection3D();
+      renderList();
+      detailsEl.innerHTML = `<div class="dtitle">${esc(tag)}</div>
+        <div class="dchips"><span class="badge b-blue">${S.scope.length} CABLES</span>
+        <span class="badge ${MS_BADGE[modelState(hostAsset)]}">${MS_TEXT[modelState(hostAsset)]}</span></div>
+        ${endpoint('Cabinet', tag, hostAsset.desc, hostAsset.loc, hostAsset)}
+        <div class="note">Pick a cable from the list, or search a tag above. Cables are routed through the vertical ducts and land on terminal strips.</div>`;
+    }
+    renderStats();
+  }
+
+  /* -------------------------------------------------------------- search UI */
+  const qEl = $('#q');
+  let searchTimer = null;
+
+  function doSearch(q) {
+    S.query = q;
+    const query = q.trim();
+    S.resultTitle = '';
+    if (!query) {
+      S.results = [];
+      S.searchGroups = null;
+      $('#nResults').textContent = 0;
+      if (S.tab === 'results') { S.tab = 'scope'; setTabUI(); }
+      renderList();
+      return;
+    }
+    // exact asset match => offer to open that cabinet
+    const exact = RAW.assets.find(a => N(a.tag) === N(query));
+    S.searchGroups = searchGroups(query);
+    S.results = S.searchGroups.cables;
+    S.results.sort((a, b) => {
+      const ea = N(a.tag) === N(query) ? 1 : 0, eb = N(b.tag) === N(query) ? 1 : 0;
+      if (ea !== eb) return eb - ea;
+      const ha = (N(a.fromTag) === N(S.host) || N(a.toTag) === N(S.host)) ? 1 : 0;
+      const hb = (N(b.fromTag) === N(S.host) || N(b.toTag) === N(S.host)) ? 1 : 0;
+      if (ha !== hb) return hb - ha;
+      return a.tag > b.tag ? 1 : -1;
+    });
+    $('#nResults').textContent = S.results.length;
+
+    if (exact && exact.count > 0 && !S.results.length) {
+      // asset with no cable matches? still allow opening
+      setHost(exact.tag);
+    }
+    if (S.results.length) {
+      S.tab = 'results';
+      setTabUI();
+      renderList();
+      const first = S.results[0];
+      const isInHost = N(first.fromTag) === N(S.host) || N(first.toTag) === N(S.host);
+      if (!isInHost) {
+        // move the cabinet to the panel side of the first result
+        const target = bestHostAsset(first);
+        if (target && target.count > 0) setHost(target.tag, first);
+        else renderDetails(first);
+      } else {
+        selectCable(first);
+      }
+    } else {
+      S.tab = 'results';
+      setTabUI();
+      renderList();
+      detailsEl.innerHTML = `<div class="empty">Nothing found for “${esc(query)}”.<br><br>Try a cable tag, panel tag, location or task ID.</div>`;
+    }
+  }
+
+  qEl.addEventListener('input', () => {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => doSearch(qEl.value), 160);
+  });
+  qEl.addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      clearTimeout(searchTimer);
+      doSearch(qEl.value);
+      if (S.results.length) selectCable(S.results[0]);
+    }
+    if (e.key === 'Escape') { qEl.value = ''; doSearch(''); }
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === '/' && document.activeElement !== qEl) { e.preventDefault(); qEl.focus(); return; }
+    if (document.activeElement === qEl) return;
+    const map = { '1': 'iso', '2': 'front', '3': 'back', '4': 'left', '5': 'right', '6': 'top', '7': 'inside', '8': 'field', '0': 'fit' };
+    if (map[e.key]) { setView(map[e.key]); return; }
+    if (e.key.toLowerCase() === 'd') { $('#tDoors').click(); }
+    if (e.key.toLowerCase() === 'l') { $('#tLabels').click(); }
+    if (e.key.toLowerCase() === 'w') { $('#tWires').click(); }
+    if (e.key.toLowerCase() === 't') { $('#tTags').click(); }
+    if (e.key.toLowerCase() === 'f') { $('#tField').click(); }
+    if (e.key.toLowerCase() === 'm' && skidRoot) { skidRoot.visible = !skidRoot.visible; toast(skidRoot.visible ? 'Model shown' : 'Model hidden'); }
+  });
+
+  /* ---------------------------------------------------------------- tabs UI */
+  function setTabUI() {
+    document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === S.tab));
+  }
+  document.querySelectorAll('.tab').forEach(t => t.onclick = () => { S.tab = t.dataset.tab; setTabUI(); renderList(); });
+
+  /* ------------------------------------------------------------------ stats */
+  function renderStats() {
+    const pulled = S.scope.filter(c => c.pulled).length;
+    const term = S.scope.filter(c => c.terminated).length;
+    const rem = S.scope.filter(c => c.__rem).length;
+    const rows = [
+      ['Schedule total', RAW.stats.total, ''],
+      ['Cabinet cables', S.scope.length, ''],
+      ['Pulled', pulled, pulled ? 'good' : ''],
+      ['Terminated', term, term ? 'good' : 'warn'],
+      ['REM in cabinet', rem, rem ? 'bad' : 'good'],
+      ['Far-end devices', farEndDevices().length, ''],
+      ['In model', RAW.stats.inModelAssets + (RAW.stats.refAssets || 0), ''],
+      ['GPU / FPS', LOW_END ? 'iGPU' : 'GPU', ''],
+    ];
+    $('#status').innerHTML = rows.map(([k, v, cls], i) =>
+      `<div class="stat ${cls}"${i === rows.length - 1 ? ' id="statFps" title="' + GPU_NAME.replace(/"/g, '') + '"' : ''}>` +
+      `<span class="k">${k}</span><span class="v">${v}</span></div>`).join('');
+    const im = document.querySelectorAll('#status .stat')[6];
+    if (im) im.title = `${RAW.stats.inModelAssets} own records + ${RAW.stats.refAssets || 0} tags referenced by other records (of ${RAW.stats.assets} assets) — Smart Completions asset export, ${RAW.stats.elements || 0} records`;
+    $('#nRem').textContent = S.remAssets.length;
+    const nd = $('#nDevices');
+    if (nd) nd.textContent = farEndDevices().length;
+    const ns = $('#nSubs');
+    if (ns) ns.textContent = subsysStats().length;
+  }
+
+  /* ------------------------------------------------------------------- toast */
+  let toastEl = null, toastTimer = null;
+  function toast(msg) {
+    if (!toastEl) {
+      toastEl = el('div', '', '');
+      toastEl.style.cssText = 'position:fixed;left:50%;bottom:74px;transform:translateX(-50%);z-index:99;' +
+        'background:rgba(8,22,30,.95);border:1px solid rgba(127,220,255,.45);color:#cdefff;' +
+        'padding:8px 14px;border-radius:999px;font-size:.7rem;font-weight:700;letter-spacing:.08em;' +
+        'text-transform:uppercase;pointer-events:none;opacity:0;transition:.2s';
+      document.body.appendChild(toastEl);
+    }
+    toastEl.textContent = msg;
+    toastEl.style.opacity = '1';
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toastEl.style.opacity = '0', 1500);
+  }
+
+  /* ------------------------------------------------------------- interaction */
+  const ray = new THREE.Raycaster();
+  const ptr = new THREE.Vector2();
+  const tip = $('#tip');
+  let downPos = null;
+
+  function pick(ev) {
+    const r = renderer.domElement.getBoundingClientRect();
+    ptr.x = ((ev.clientX - r.left) / r.width) * 2 - 1;
+    ptr.y = -((ev.clientY - r.top) / r.height) * 2 + 1;
+    ray.setFromCamera(ptr, camera);
+    const hits = ray.intersectObjects([
+      ...S.cables.map(o => o.mesh), ...S.devices, ...terminalPicks, ...fieldGroup.children
+    ], true);
+    for (const h of hits) {
+      let o = h.object;
+      while (o && !o.userData.kind) o = o.parent;
+      if (!o || !o.userData.kind) continue;
+      const u = o.userData;
+      if (u.kind === 'terminal') {
+        const slot = u.instanced && h.instanceId != null ? S.terminals[h.instanceId] : u.slot;
+        return { kind: 'terminal', slot };
+      }
+      if (u.kind === 'cable') return { kind: 'cable', cable: u.cable };
+      if (u.kind === 'device') return { kind: 'device', obj: o };
+      if (u.kind === 'field') return { kind: 'field', tag: u.tag, obj: o };
+    }
+    return null;
+  }
+
+  renderer.domElement.addEventListener('pointerdown', e => { downPos = { x: e.clientX, y: e.clientY }; });
+  renderer.domElement.addEventListener('pointerup', e => {
+    if (!downPos) return;
+    const moved = Math.abs(e.clientX - downPos.x) + Math.abs(e.clientY - downPos.y);
+    downPos = null;
+    if (moved > 6) return;
+    const o = pick(e);
+    if (!o) return;
+    if (o.kind === 'cable') selectCable(o.cable);
+    else if (o.kind === 'device') selectDevice(o.obj);
+    else if (o.kind === 'terminal' && o.slot.cable) selectCable(o.slot.cable);
+    else if (o.kind === 'field') {
+      const id = o.tag;
+      $('#detailTag').textContent = id;
+      focusPoint(o.obj.position.clone().add(new THREE.Vector3(0, 8, 0)), 54);
+      renderDeviceDetails(id, S.scope.filter(c => N(c.fromTag) === N(id) || N(c.toTag) === N(id)));
+    }
+  });
+
+  renderer.domElement.addEventListener('pointermove', e => {
+    const o = pick(e);
+    if (!o) { tip.style.display = 'none'; renderer.domElement.style.cursor = 'grab'; return; }
+    renderer.domElement.style.cursor = 'pointer';
+    let text = '';
+    if (o.kind === 'cable') text = o.cable.tag;
+    else if (o.kind === 'field') text = 'Far end · ' + o.tag;
+    else if (o.kind === 'device') text = o.obj.userData.id;
+    else if (o.kind === 'terminal') {
+      const s = o.slot;
+      text = 'TB slot ' + String(s.index + 1).padStart(2, '0') + (s.cable ? ' · ' + s.cable.tag : '');
+    }
+    const r = stageEl.getBoundingClientRect();
+    tip.style.display = 'block';
+    tip.style.left = (e.clientX - r.left) + 'px';
+    tip.style.top = (e.clientY - r.top) + 'px';
+    tip.textContent = text;
+  });
+  renderer.domElement.addEventListener('pointerleave', () => { tip.style.display = 'none'; });
+
+  /* tool buttons */
+  function toggleTool(btn, on) { btn.classList.toggle('on', on); }
+
+  $('#tWires').onclick = () => {
+    S.showWires = !S.showWires;
+    toggleTool($('#tWires'), S.showWires);
+    cableGroup.visible = S.showWires;
+  };
+  $('#tField').onclick = () => {
+    S.fieldMode = S.fieldMode === 'sel' ? 'all' : S.fieldMode === 'all' ? 'off' : 'sel';
+    toggleTool($('#tField'), S.fieldMode !== 'off');
+    refreshField();
+    const lbl = $('#tField');
+    lbl.innerHTML = '<span class="sw"></span>' + (S.fieldMode === 'sel' ? 'Field end' : S.fieldMode === 'all' ? 'Field all' : 'Field off');
+    toast(S.fieldMode === 'off' ? 'Far end hidden'
+      : S.fieldMode === 'all' ? 'Showing every far end in this cabinet'
+      : 'Showing the far end of the selected cable');
+  };
+  $('#tLabels').onclick = () => {
+    S.showLabels = !S.showLabels;
+    toggleTool($('#tLabels'), S.showLabels);
+    S.devices.forEach(d => { if (d.userData.labelSprite) d.userData.labelSprite.visible = S.showLabels; });
+  };
+  $('#tDoors').onclick = () => {
+    setDoors(S.doorTarget > 0.5 ? 0 : 1);
+    toggleTool($('#tDoors'), S.doorTarget > 0.5);
+  };
+  $('#tXray').onclick = () => {
+    S.xray = !S.xray;
+    toggleTool($('#tXray'), S.xray);
+    const op = S.xray ? 0.18 : 1;
+    shellGroup.traverse(o => {
+      if (o.isMesh) {
+        o.material.transparent = S.xray || o.material === MAT.glass;
+        o.material.opacity = S.xray ? op : 1;
+        o.material.depthWrite = !S.xray;
+        o.material.needsUpdate = true;
+      }
+    });
+    doors.forEach(d => d.traverse(o => {
+      if (o.isMesh) {
+        o.material.transparent = S.xray;
+        o.material.opacity = S.xray ? 0.12 : 1;
+        o.material.needsUpdate = true;
+      }
+    }));
+  };
+  $('#tSpin').onclick = () => {
+    S.spin = !S.spin;
+    toggleTool($('#tSpin'), S.spin);
+    controls.autoRotate = S.spin;
+    controls.autoRotateSpeed = 0.8;
+  };
+
+  $('#tFx').onclick = () => {
+    fxOn = !fxOn;
+    toggleTool($('#tFx'), fxOn);
+    toast(fxOn ? 'Glow on' : 'Glow off');
+  };
+
+  $('#tTags').onclick = () => {
+    const on = !$('#tTags').classList.contains('on');
+    toggleTool($('#tTags'), on);
+    showAllTags(on);
+  };
+
+  /* ---------------------------------------------------- external 3D model
+     The Navisworks .nwd file is a proprietary container and cannot be read
+     in the browser. Export the skid from Navisworks / Revit as GLB, GLTF or
+     OBJ and it can be dropped straight into this scene. */
+  let skidRoot = null, skidName = '';
+
+  function loadSkidFile(file) {
+    if (!file) return;
+    const ext = (file.name.split('.').pop() || '').toLowerCase();
+    const reader = new FileReader();
+    toast('Loading ' + file.name + ' …');
+
+    const place = obj => {
+      const box = new THREE.Box3().setFromObject(obj);
+      if (!isFinite(box.min.x) || box.isEmpty()) { toast('Model has no geometry'); return; }
+      const size = box.getSize(new THREE.Vector3());
+      const target = 220;                       // fit the skid into the site view
+      const k = target / Math.max(size.x, size.y, size.z);
+      obj.scale.setScalar(k);
+      box.setFromObject(obj);
+      const c = box.getCenter(new THREE.Vector3());
+      obj.position.x -= c.x;
+      obj.position.z -= c.z;
+      obj.position.y -= box.min.y;              // sit on the ground
+      obj.position.z += 62;                     // in front of the cabinet
+      if (skidRoot) { scene.remove(skidRoot); disposeTree(skidRoot); }
+      skidRoot = obj;
+      skidRoot.name = 'skid:' + file.name;
+      scene.add(skidRoot);
+      let tris = 0, meshes = 0;
+      obj.traverse(o => { if (o.isMesh) { meshes++; const p = o.geometry.attributes.position; tris += p ? p.count / 3 : 0; } });
+      skidName = file.name;
+      toggleTool($('#tModel'), true);
+      $('#tModel').innerHTML = 'Model: ' + file.name.slice(0, 18) + (file.name.length > 18 ? '…' : '');
+      setView('fit');
+      toast(meshes + ' meshes · ' + Math.round(tris).toLocaleString() + ' triangles loaded');
+    };
+
+    reader.onload = () => {
+      try {
+        const data = reader.result;
+        if (ext === 'obj') {
+          place(new THREE.OBJLoader().parse(typeof data === 'string' ? data : new TextDecoder().decode(data)));
+        } else if (typeof data === 'string') {
+          new THREE.GLTFLoader().parse(data, '', gltf => place(gltf.scene), e => toast('glTF parse error'));
+        } else {
+          new THREE.GLTFLoader().parse(data, '', gltf => place(gltf.scene), e => toast('GLB parse error'));
+        }
+      } catch (e) { toast('Could not read model: ' + e.message); }
+    };
+    if (ext === 'obj' || ext === 'gltf') reader.readAsText(file);
+    else reader.readAsArrayBuffer(file);
+  }
+
+  function disposeTree(root) {
+    root.traverse(o => {
+      if (o.geometry) o.geometry.dispose();
+      if (o.material) {
+        const mats = Array.isArray(o.material) ? o.material : [o.material];
+        mats.forEach(m => { for (const k in m) { const v = m[k]; if (v && v.isTexture) v.dispose(); } m.dispose(); });
+      }
+    });
+  }
+
+  $('#tModel').onclick = () => $('#modelFile').click();
+  $('#modelFile').onchange = e => { loadSkidFile(e.target.files[0]); e.target.value = ''; };
+
+  document.querySelectorAll('.vbtn').forEach(b => b.onclick = () => setView(b.dataset.view));
+  hostSel.onchange = () => setHost(hostSel.value);
+  $('#routeSel').onchange = e => { S.routeMode = e.target.value; buildCables(); if (S.selCable) selectCable(S.selCable, { focus: false }); };
+
+  /* CSV / PNG */
+  $('#btnCsv').onclick = () => {
+    if (S.tab === 'pins') {
+      const head = ['Cabinet', 'Cable Tag', 'Terminal Strip', 'Slot', 'Row', 'Direction', 'Gland', 'Duct', 'Other End', 'Voltage', 'Cores', 'Size'];
+      const rows = S.cables.map(o => {
+        const c = o.cable, slotNo = (o.term.index % TERM_PER_STRIP) + 1;
+        const dir = N(c.toTag) === N(S.host) ? 'IN' : 'OUT';
+        return [S.host, c.tag, o.term.strip, slotNo, Math.floor(Math.floor(o.term.index / TERM_PER_STRIP) / 3) + 1,
+                dir, 'G-' + String(o.gland + 1).padStart(2, '0'), o.side === 'left' ? 'LEFT' : 'RIGHT',
+                dir === 'IN' ? c.fromTag : c.toTag, c.voltage, c.cores, c.size];
+      });
+      const csv = [head, ...rows].map(r => r.map(v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"').join(',')).join('\r\n');
+      const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'termination_pins_' + S.host.replace(/[^\w-]/g, '_') + '.csv';
+      a.click(); URL.revokeObjectURL(a.href);
+      toast('Pin report exported');
+      return;
+    }
+    const arr = currentList();
+    const head = ['Cable Tag', 'Discipline', 'From Tag', 'From Description', 'To Tag', 'To Description',
+                  'Cable Type', 'Voltage', 'Cores', 'Size', 'Length', 'Pulled', 'Terminated', 'Milestone', 'Remarks'];
+    const rows = arr.map(c => [c.tag, c.discipline, c.fromTag, c.fromDesc, c.toTag, c.toDesc, c.cableType,
+      c.voltage, c.cores, c.size, c.length, c.pulled ? 'Yes' : 'No', c.terminated ? 'Yes' : 'No', c.milestone, c.remarks]);
+    const csv = [head, ...rows].map(r => r.map(v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"').join(',')).join('\r\n');
+    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = (S.tab === 'rem' ? 'REM' : S.tab === 'results' ? 'search' : 'cabinet') + '_cables.csv';
+    a.click();
+    URL.revokeObjectURL(a.href);
+    toast('CSV exported');
+  };
+
+  $('#btnPng').onclick = () => {
+    if (composer && fxOn) composer.render(); else renderer.render(scene, camera);
+    const a = document.createElement('a');
+    a.href = renderer.domElement.toDataURL('image/png');
+    a.download = 'cabinet-3d.png';
+    a.click();
+    toast('PNG saved');
+  };
+
+  /* ------------------------------------------------------------------ resize */
+  function resize() {
+    const w = stageEl.clientWidth, h = stageEl.clientHeight;
+    if (!w || !h) return;
+    renderer.setSize(w, h, false);
+    renderer.domElement.style.width = w + 'px';
+    renderer.domElement.style.height = h + 'px';
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+    if (composer) { composer.setSize(w, h); if (bloomPass) bloomPass.resolution.set(w, h); }
+  }
+  new ResizeObserver(resize).observe(stageEl);
+  window.addEventListener('resize', resize);
+
+  /* ------------------------------------------------------------------- loop */
+  let last = performance.now();
+  let fpsFrames = 0, fpsT0 = last;
+  function animate(now) {
+    requestAnimationFrame(animate);
+    const dt = Math.min(50, now - last); last = now;
+
+    /* live FPS readout in the status bar */
+    fpsFrames++;
+    if (now - fpsT0 > 700) {
+      const el2 = document.getElementById('statFps');
+      if (el2) {
+        const fps = Math.round(fpsFrames * 1000 / (now - fpsT0));
+        el2.className = 'stat ' + (fps >= 45 ? 'good' : fps >= 22 ? '' : 'bad');
+        el2.innerHTML = `<span class="k">GPU / FPS</span><span class="v">${fps} fps</span>`;
+      }
+      fpsFrames = 0; fpsT0 = now;
+    }
+
+    // door animation
+    if (Math.abs(S.doors - S.doorTarget) > 0.001) {
+      S.doors += (S.doorTarget - S.doors) * Math.min(1, dt / 160);
+      const a = S.doors * 1.92;
+      doorL.rotation.y = -a;
+      doorR.rotation.y = a;
+    }
+
+    // camera tween
+    if (tween) {
+      tween.t += dt;
+      const k = Math.min(1, tween.t / tween.dur);
+      const e = k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
+      camera.position.lerpVectors(tween.fromP, tween.toP, e);
+      controls.target.lerpVectors(tween.fromT, tween.toT, e);
+      if (k >= 1) tween = null;
+    }
+
+    // LEDs
+    const tsec = now / 1000;
+    ledMats.forEach((m, i) => { m.emissiveIntensity = 1.1 + Math.sin(tsec * 2.4 + i) * 0.9; });
+
+    // tracer pulse
+    if (tracer.visible && S.selCable) {
+      const obj = S.cables.find(o => o.cable === S.selCable);
+      if (obj) {
+        pulseT = (pulseT + dt / 2600) % 1;
+        const p = obj.curve.getPointAt(pulseT);
+        tracer.position.copy(p);
+        const s = 0.85 + Math.sin(tsec * 6) * 0.15;
+        tracer.scale.setScalar(s);
+        ring.position.copy(p);
+        ring.lookAt(camera.position);
+        ring.scale.setScalar(1 + Math.sin(tsec * 4) * 0.25);
+        ringMat.opacity = 0.35 + Math.sin(tsec * 4) * 0.2;
+        if (obj.mesh.material === selMat) selMat.emissiveIntensity = 1.0 + Math.sin(tsec * 5) * 0.4;
+      }
+    }
+
+    controls.update();
+    if (composer && fxOn) composer.render(); else renderer.render(scene, camera);
+  }
+
+  /* ------------------------------------------------------------------- init */
+  function renderAll() { renderList(); renderStats(); }
+
+  S.routeMode = 'auto';
+  computeRem();
+  fillHostSelect();
+
+  // default cabinet: heaviest asset that exists in the model inventory
+  const preferred = RAW.assets.find(a => a.inModel && /SWITCHBOARD|SWGR|PANEL|BOARD|CABINET|MCC/i.test(a.desc || '') && a.count > 40)
+                 || RAW.assets.find(a => a.inModel && a.count > 40)
+                 || RAW.assets[0];
+
+  $('#nRem').textContent = S.remCableList.length;
+  setHost(preferred.tag);
+  updateKindLegend();
+  renderFilters();
+  setTabUI();
+  resize();
+  setView('iso', true);
+  setDoors(1);
+  toggleTool($('#tDoors'), true);
+  requestAnimationFrame(animate);
+
+  window.__CAB3D = {
+    S: S, C: C, setHost: setHost, selectCable: selectCable, setView: setView,
+    search: q => doSearch(q), refreshField: refreshField, fieldDevices: fieldDevices,
+    deviceKind: deviceKind, farEndDevices: farEndDevices, assetOf: assetOf,
+    renderer: renderer, scene: scene, camera: camera
+  };
+})();
+</script>
+</body>
+</html>
