@@ -192,9 +192,10 @@ def clean(v):
 
 
 def build_maps(rows):
-    """task -> {sub, state, type, date, closed}; asset tag -> most common subsystem."""
+    """task -> {sub, subs, state, type, date, closed}; asset tag -> Counter of subsystems."""
     by_task = {}
     by_asset = collections.defaultdict(collections.Counter)
+    task_subs = collections.defaultdict(collections.Counter)
     for r in rows:
         pb = clean(r.get('ProcessBreakdown'))
         task = clean(r.get('TaskName'))
@@ -203,6 +204,8 @@ def build_maps(rows):
             by_asset[tag][pb] += 1
         if not task:
             continue
+        if pb:
+            task_subs[task][pb] += 1
         state = clean(r.get('TaskState'))
         info = {
             'sub': pb,
@@ -215,7 +218,33 @@ def build_maps(rows):
         # one task id should be one row; if it repeats, the Closed row wins
         if old is None or (info['closed'] and not old['closed']):
             by_task[task] = info
-    return by_task, {k: c.most_common(1)[0][0] for k, c in by_asset.items()}
+    for task, c in task_subs.items():
+        if task in by_task:
+            by_task[task]['subs'] = c
+            by_task[task]['sub'] = c.most_common(1)[0][0]
+    return by_task, dict(by_asset)
+
+
+def pick_subsystem(info, by_asset, from_tag, to_tag, cur):
+    """Pick the SmartCloud subsystem for one cable.
+
+    The same task id / asset tag can legitimately show up under more than
+    one subsystem (multi-company rows), so "most frequent" can flip between
+    two pulls and make the 30-minute sync rewrite itself forever. When the
+    page already shows one of the reported values, keep it.
+    """
+    cands = collections.Counter()
+    if info.get('subs'):
+        cands.update(info['subs'])
+    cands.update(by_asset.get(from_tag) or {})
+    cands.update(by_asset.get(to_tag) or {})
+    if not cands:
+        return ''
+    if cur and cur in cands:
+        return cur
+    if info.get('subs'):
+        return info['subs'].most_common(1)[0][0]
+    return cands.most_common(1)[0][0]
 
 
 def iso_date(v):
