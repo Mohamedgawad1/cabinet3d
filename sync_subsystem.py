@@ -87,8 +87,69 @@ CACHE_CANDIDATES = [
 ]
 
 
+LOCK = os.path.join(HERE, '.sync.lock')
+
+
 def log(msg):
     print(msg, flush=True)
+
+
+def acquire_lock():
+    """One sync at a time - a manual run must never collide with the scheduled one."""
+    for _ in range(2):
+        try:
+            fd = os.open(LOCK, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+            os.write(fd, str(os.getpid()).encode())
+            os.close(fd)
+            return True
+        except FileExistsError:
+            try:
+                age_min = (time.time() - os.path.getmtime(LOCK)) / 60.0
+            except OSError:
+                age_min = 999
+            if age_min < 45:
+                return False
+            try:
+                os.remove(LOCK)
+            except OSError:
+                return False
+    return False
+
+
+def release_lock():
+    try:
+        os.remove(LOCK)
+    except OSError:
+        pass
+
+
+def norm_bytes(b):
+    return b.replace(b'\r\n', b'\n').strip()
+
+
+def validate_page_file(path, rows_expected, cols_expected):
+    """Guard rail: the published page must always stay loadable."""
+    try:
+        txt = open(path, encoding='utf-8-sig').read()
+    except Exception as e:
+        return 'cannot read: %s' % e
+    m = re.search(r'(?s)window\.C3D_DATA\s*=\s*(\{.*\})\s*;?\s*$', txt)
+    if not m:
+        return 'C3D_DATA block missing'
+    try:
+        back = json.loads(m.group(1))
+    except Exception as e:
+        return 'invalid JSON: %s' % str(e)[:80]
+    cols = back.get('columns') or []
+    rows = back.get('rows') or []
+    if len(cols) != cols_expected:
+        return 'columns %d != %d' % (len(cols), cols_expected)
+    if len(rows) != rows_expected:
+        return 'rows %d != %d' % (len(rows), rows_expected)
+    for i, r in enumerate(rows):
+        if not isinstance(r, list) or len(r) != cols_expected:
+            return 'row %d has %d fields' % (i, len(r) if isinstance(r, list) else -1)
+    return ''
 
 
 def cdp_alive():
@@ -228,11 +289,13 @@ def build_maps(rows):
 def pick_subsystem(info, by_asset, from_tag, to_tag, cur):
     """Pick the SmartCloud subsystem for one cable.
 
-    The same task id / asset tag can legitimately show up under more than
-    one subsystem (multi-company rows), so "most frequent" can flip between
-    two pulls and make the 30-minute sync rewrite itself forever. When the
-    page already shows one of the reported values, keep it.
+    The page's own value is never overwritten: the smartcloud grid and the
+    cached asset export disagree on a handful of package names, and swapping
+    between them made the sync rewrite itself every 30 minutes. A subsystem
+    is only filled in when the cell is empty.
     """
+    if cur:
+        return cur
     cands = collections.Counter()
     if info.get('subs'):
         cands.update(info['subs'])
@@ -240,8 +303,6 @@ def pick_subsystem(info, by_asset, from_tag, to_tag, cur):
     cands.update(by_asset.get(to_tag) or {})
     if not cands:
         return ''
-    if cur and cur in cands:
-        return cur
     if info.get('subs'):
         return info['subs'].most_common(1)[0][0]
     return cands.most_common(1)[0][0]
@@ -285,8 +346,7 @@ def apply(by_task, by_asset, dry_run=False, flags=True):
         info = by_task.get(clean(row[ti])) or {}
 
         cur = clean(row[si])
-        new = (info.get('sub') or by_asset.get(clean(row[fi]))
-               or by_asset.get(clean(row[toi])) or '')
+        new = pick_subsystem(info, by_asset, clean(row[fi]), clean(row[toi]), cur)
         if not new:
             stats['subsystem no match'] += 1
         elif new == cur:
@@ -325,7 +385,8 @@ def apply(by_task, by_asset, dry_run=False, flags=True):
     ref_fixed = 0
     for a in obj.get('assets', []):
         tag = clean(a.get('tag'))
-        new = by_asset.get(tag)
+        cnt = by_asset.get(tag)
+        new = cnt.most_common(1)[0][0] if cnt else ''
         cur = clean(a.get('refName'))
         if new and cur and new.startswith(cur) and new != cur:
             a['refName'] = new
@@ -354,8 +415,19 @@ def apply(by_task, by_asset, dry_run=False, flags=True):
         return False
 
     body = json.dumps(obj, ensure_ascii=False, separators=(',', ':'))
-    with open(DATA, 'w', encoding='utf-8-sig', newline='\n') as f:
+    tmp = DATA + '.tmp'
+    with open(tmp, 'w', encoding='utf-8-sig', newline='\n') as f:
         f.write(prefix + body + (tail or ';\n'))
+    # never publish a file the page cannot load
+    problem = validate_page_file(tmp, len(obj['rows']), len(obj['columns']))
+    if problem:
+        try:
+            os.remove(tmp)
+        except OSError:
+            pass
+        log('\n !! new file failed the check (%s) - old page left untouched' % problem)
+        return False
+    os.replace(tmp, DATA)
     log('\nWrote %s (%d changes, %.1f MB)' % (DATA, changed, os.path.getsize(DATA) / 1048576))
     log('   totals now: %d cables, pulled %d, terminated %d' % (
         len(obj['rows']), obj['stats']['pulled'], obj['stats']['terminated']))
@@ -368,6 +440,28 @@ def apply(by_task, by_asset, dry_run=False, flags=True):
 def git(*args, **kw):
     return subprocess.run(['git', '-C', HERE] + list(args), capture_output=True,
                           text=True, timeout=kw.get('timeout', 600))
+
+
+def check_live(expected, tries=4, wait=45):
+    """Confirm GitHub Pages really serves what we just pushed (log only)."""
+    import hashlib
+    import urllib.request
+    want = hashlib.sha256(norm_bytes(expected)).hexdigest()
+    url = LIVE_URL.rstrip('/') + '/data/cables.js'
+    for i in range(tries):
+        try:
+            req = urllib.request.Request(url + '?cb=%d' % int(time.time() * 1000),
+                                         headers={'User-Agent': 'Mozilla/5.0'})
+            data = urllib.request.urlopen(req, timeout=45).read()
+            if hashlib.sha256(norm_bytes(data)).hexdigest() == want:
+                log('   live check: GitHub Pages serves the new file')
+                return True
+            log('   live check %d: still the previous build' % (i + 1))
+        except Exception as e:
+            log('   live check %d: %s' % (i + 1, type(e).__name__))
+        time.sleep(wait)
+    log('   live check: not visible yet - GitHub Pages still rebuilding (data is committed)')
+    return False
 
 
 def push():
@@ -395,6 +489,7 @@ def push():
         if r.returncode == 0:
             log('   pushed -> GitHub Pages is rebuilding (~40 s)')
             log('   live: %s' % LIVE_URL)
+            check_live(open(DATA, 'rb').read())
             return 0
         err = (r.stderr or '') + (r.stdout or '')
         if 'fetch first' in err or 'rejected' in err or 'non-fast-forward' in err:
@@ -462,4 +557,10 @@ def main():
 
 
 if __name__ == '__main__':
-    sys.exit(main())
+    if not acquire_lock():
+        log('   another sync is already running - skipped')
+        sys.exit(0)
+    try:
+        sys.exit(main())
+    finally:
+        release_lock()
